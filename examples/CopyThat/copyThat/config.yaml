@@ -24,6 +24,16 @@ routes:
     Test:
       func: CopyThat.Test.Test
       description: My little test
+      #showCliName: True
+      #showCliDescription: True
+      showCliName: False
+      showCliDescription: False
+      logger: myapp.cli
+      data:
+        - this
+        - is
+        - some
+        - data
 
 # Config for logging
 # ------------------

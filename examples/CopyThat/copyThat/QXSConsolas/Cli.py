@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import os, sys, inspect, re, logging
-import QXSConsolas.Configuration
+from QXSConsolas.Configuration import Configuration, SysConf
 from clint.textui import puts, colored, indent
 from functools import wraps
 
@@ -11,24 +11,37 @@ class ArgumentParserException(Exception):
     pass
 
 class ArgumentParser:
+    """
+    Parses cli arguments and options from the sys.argv or another list
+    """
     _opts = {}
 
     options = {}
     arguments = []
 
     def __init__(self, opts = []):
+        """
+        Creates the argument parser
+        opts is a list of dicts, that will be passed to the addOptionDefinition method
+        """
         assert isinstance(opts, list), "longopts must be a list"
         for lopt in opts:
             assert isinstance(lopt, dict), "every element in longopts must be a dict"
             self.addOptionDefinition(**lopt)
 
     def getOptionDefinitions(self):
+        """
+        Returns a dict of the current option definitions
+        """
         return self._opts
         
     def getCollapsedOptionDefinitions(self):
+        """
+        Returns a dict of the current option definitions with references collapsed in their final parent
+        """
         definitions = {}
         for key in self._opts:
-            finalKey=self.resolveFinalKey(key)
+            finalKey=self._resolveFinalKey(key)
             if not finalKey in definitions:
                 definitions[finalKey] = { "referencedBy": [] }
             if key == finalKey:
@@ -40,6 +53,9 @@ class ArgumentParser:
         return definitions
 
     def clearOptionDefinitions(self):
+        """
+        Clears the current option definitions
+        """
         self._longopts = {}
 
     def addOptionDefinition(
@@ -51,6 +67,9 @@ class ArgumentParser:
         references = None,
         valuename = "VALUE"
     ):
+        """
+        Adds a new definition to the option definitions
+        """
         if not references is None:
             if not references in self._opts:
                 raise ArgumentParserException("You cannot specify a reference \"" + references + "\" that does not exist for argument \"" + argument + "\"")
@@ -62,7 +81,10 @@ class ArgumentParser:
             "valuename": str(valuename)
         }
 
-    def resolveFinalKey(self, key):
+    def _resolveFinalKey(self, key):
+        """
+        Resolves the final key for a key in case it references another option definition
+        """
         # final key resolution
         i = 0
         tmpopt = self._opts[key]
@@ -75,12 +97,15 @@ class ArgumentParser:
         return key
 
     def _setOption(self, key, value, opt):
+        """
+        This adds a value to the options property
+        """
         key = str(key)
         if value is None:
             value = opt["default"]
 
         # final key resolution
-        key = self.resolveFinalKey(key)
+        key = self._resolveFinalKey(key)
 
         if key in self.options:
             if opt["multiple"]:
@@ -94,6 +119,12 @@ class ArgumentParser:
                 self.options[key] = value
 
     def parseArguments(self, argv=None):
+        """
+        Parses the argument with argv as a list
+        In case argv is None sys.argv will be used
+        Returns (options, arguments)
+        Also sets the options and arguments properties
+        """
         self.options = {}
         self.arguments = []
         # None? use sys.argv
@@ -159,10 +190,17 @@ class ArgumentParser:
 
 
 class Application:
+    """
+    This is the cli application
+    The QXSConsolas.run() method works with Application objects.
+    The Application Object will also be passed to the cli function that will be decorated
+    """
+
     _app = None
     _argparser = None
 
     name = None
+    description = None
     data = None
     configuration = None
     logger = None
@@ -176,23 +214,53 @@ class Application:
         data = None,
         logger = None,
         configuration = None,
-        name = None
+        name = None,
+        description = None
     ):
+        """
+        Creates the application
+        app is the function, that will be called
+        opts are the options for the ArgumentParser object
+        logger is a logger object
+        data is application specific data (as a configuration object)
+        configuration is the system configuration (as configuration object)
+        name is the name of the cli endpoint
+        description is the description of the cli endpoint
+        """
         self._app = app
         self._argparser = ArgumentParser(opts = opts)
         assert logger is None or isinstance(logger, logging.Logger), "logger is not a valid logging.Logger"
-        self.logger = logger
-        assert data is None or isinstance(data, QXSConsolas.Configuration.Configuration), "data is not a valid QXSConsolas.Configuration.Configuration"
+        if self.logger is None:
+            self.logger = logging
+        else:
+            self.logger = logger
+        assert data is None or isinstance(data, Configuration), "data is not a valid QXSConsolas.Configuration.Configuration"
         self.data = data
-        assert configuration is None or isinstance(configuration, QXSConsolas.Configuration.Configuration), "data is not a valid QXSConsolas.Configuration.Configuration"
-        self.configuration = configuration
-        self.name = name
+        if configuration is None:
+            self.configuration = SysConf()
+        else:
+            assert isinstance(configuration, Configuration), "data is not a valid QXSConsolas.Configuration.Configuration"
+            self.configuration = configuration
+        if name is None:
+            self.name = ""
+        else:
+            self.name = str(name)
+        if description is None:
+            self.description = ""
+        else:
+            self.description = str(description)
 
     def getHelpDict(self):
+        """
+        Returns the help of the application
+        """
         return self._argparser.getCollapsedOptionDefinitions()
 
 
     def formatArgumentName(self, argumentName, valueName="VALUE"):
+        """
+        Formats an argument name
+        """
         argumentName = str(argumentName).split('=')
         if len(argumentName) > 1:
            return colored.green(argumentName[0] + "=") + colored.yellow(str(valueName))
@@ -204,6 +272,9 @@ class Application:
         return colored.green(argumentName[0])
 
     def formatArgumentDefinitionBlock(self, argumentName, defBlock):
+        """
+        Formats a definition block
+        """
         s = self.formatArgumentName(argumentName, defBlock["valuename"])
         for arg in defBlock["referencedBy"]:
            s += ", " + self.formatArgumentName(arg, defBlock["valuename"])
@@ -221,29 +292,73 @@ class Application:
 
         return s
 
-    def showHelp(self, showName = True):
+    def showHelp(self, showName = True, showDescription = True):
+        """
+        Prints the the help of the application
+        """
         definition = self._argparser.getCollapsedOptionDefinitions()
-        if showName and not self.name is None:
-            puts(self.name + "\n")
+        if showName and not self.name is None and self.name != "":
+            length = 0 
+            for line in self.name.split("\n"):
+                length = max(length, len(line))
+            puts(colored.green("=" * length))
+            puts(colored.green(self.name.rstrip()))
+            puts(colored.green("=" * length) + "\n")
+        if showDescription and not self.description is None and self.description != "":
+            puts(self.description + "\n")
         for key in definition:
             puts(self.formatArgumentDefinitionBlock(key, definition[key]))
 
-    def run(self, argv = None):
+    def run(self, argv = None, data = None, logger = None):
+        """
+        Runs the function
+        """
+        if not logger is None:
+            assert isinstance(logger, logging.Logger), "logger is not a valid logging.Logger"
+            self.logger = logger
+        if not data is None:
+            assert isinstance(data, Configuration), "data is not a valid QXSConsolas.Configuration.Configuration"
+            self.data = data
+
         self.options, self.arguments = self._argparser.parseArguments(argv)
         self._app(self)
 
 
 def CliApp(
     Name = None,
+    Description = None,
     Opts = []
 ):
+    """
+    Decorator for a function, that returns a cli application
+
+    Name is the name of the application
+    Description is the description of the application
+    Opts is a list of dict
+        Each dict must contain the following options:
+            arguemnt  is a string in the following form:
+                "--name"   is a long  option without a value
+                "-z"       is a short option without a value
+                "--name:"  is a long  option with a required value
+                "-z:"      is a short option with a required value
+                "--name::" is a long  option with an optional value
+                "-z::"     is a short option with an optional value
+                "--name="  is a long  option with value after the "=" char
+        Each dict can contain the following options:
+            description is a string, that describes the argument
+            default     is a default value, that will be used in case a value is absent
+            multiple    is a bool, in case of True, the argument can be used multiple times
+            references  is a string, that holds the reference to another argument dict definition
+            valuename   is a string, that will be shown in the help as the VALUE placeholder
+       
+    """
     assert isinstance(Opts, list), "Opts must be a list"
     for lopt in Opts:
         assert isinstance(lopt, dict), "every element in Opts must be a dict"
     def CliAppDecorator(func):
         @wraps(func)
         def FuncWrapper():
-            return Application(app = func, opts = Opts, name = Name)
+            return Application(app = func, opts = Opts, name = Name, description = Description)
         return FuncWrapper
     return CliAppDecorator
 

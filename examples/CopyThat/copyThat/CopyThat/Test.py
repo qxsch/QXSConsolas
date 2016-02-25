@@ -4,7 +4,8 @@ import logging
 from QXSConsolas.Cli import CliApp
 
 @CliApp(
-    Name = "jaaaaa",
+    Name = "Tests something",
+    Description = "A very nice description cannot live without the text",
     Opts = [ 
         { "argument": "--name:",     "default": None, "multiple": True, "description": "den namen eingeben", "valuename": "NAME" },
         { "argument": "--verbose::", "default": 0,                      "description": "schwatzen?",         "valuename": "VERBOSITY" },
@@ -14,14 +15,20 @@ from QXSConsolas.Cli import CliApp
 )
 def Test(app):
     print("Hallo Welt - Test")
+    print("Options:")
     print(app.options)
+    print("Arguments:")
     print(app.arguments)
+    print("System Configuration:")
+    print(app.configuration)
+    if not app.data is None:
+       print("Data:")
+       print(app.data.dump())
+    print("\n")
+    # injected logger
+    app.logger.warning("hello from the injected loggger")
     # Using explicitely the root logger always logs to the console
     logging.debug("This is an info of the root logger")
-    logging.info("This is an info of the root logger")
-    # The unconfigured loggers are captured by the root logger (-> console)
-    unconfigured_logger = logging.getLogger('unconfigured')
-    unconfigured_logger.error("This is an info from an unknown / unconfigured source")
     # Logging from myapp.lib
     myapp_cli_logger = logging.getLogger('myapp.cli')
     myapp_cli_logger.info("This is an info from myapp.cli")  # Not recorded
