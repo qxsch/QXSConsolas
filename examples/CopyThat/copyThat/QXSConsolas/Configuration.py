@@ -6,7 +6,7 @@ class ConfigurationException(Exception):
     pass
 
 class Configuration:
-    configuaration = None
+    configuration = None
 
     def __init__(self, configFile = None, configData = None):
         if configFile is None and configData is None:
@@ -16,15 +16,15 @@ class Configuration:
         if configData is None:
             with open(configFile) as myfile:
                 configData="\n".join(line.rstrip() for line in myfile)
-            self.configuaration = yaml.load(configData)
+            self.configuration = yaml.load(configData)
         else:
-            self.configuaration = configData
+            self.configuration = configData
 
     def getValueAsConfiguration(self, path):
         return Configuration(configData = self.getValue(path))
 
     def pathExists(self, path):
-        _cfg = self.configuaration
+        _cfg = self.configuration
         try:
             for currentKey in path.split("."):
                 _cfg = _cfg[currentKey]
@@ -33,7 +33,7 @@ class Configuration:
             return False
 
     def getValue(self, path):
-        _cfg = self.configuaration
+        _cfg = self.configuration
         fullCurrentKey = []
         try:
             for currentKey in path.split("."):
@@ -48,10 +48,25 @@ class Configuration:
                 raise ConfigurationException("The key \"" + fullCurrentKey + "\" does not exist and hence the key \"" + path + "\" does not exist.")
 
     def dump(self):
-        return yaml.dump(self.configuaration)
+        return str(yaml.dump(self.configuration)).strip()
 
     def __getitem__(self, key):
-        return Configuration(self.configuaration[key])
+        if isinstance(self.configuration[key], dict) or isinstance(self.configuration[key], list):
+            return Configuration(configData = self.configuration[key])
+        else:
+            return self.configuration[key] 
+
+    def __iter__(self):
+        if isinstance(self.configuration, dict):
+            for x in self.configuration:
+                yield x
+        elif isinstance(self.configuration, list):
+            i = 0
+            for x in self.configuration:
+                yield i
+                i = i + 1
+        else:
+            raise ConfigurationException("You cannot iterate a type that is not iteratable.")
     # https://docs.python.org/3/reference/datamodel.html?emulating-container-types#emulating-container-types
 
 

@@ -24,7 +24,11 @@ def Test(app):
     if not app.data is None:
        print("Data:")
        print(app.data.dump())
-    print("\n")
+    print("")
+    s = ""
+    for key in app.data:
+        s = s + " " + str(app.data[key])
+    print(s.strip())
     # injected logger
     app.logger.warning("hello from the injected loggger")
     # Using explicitely the root logger always logs to the console
