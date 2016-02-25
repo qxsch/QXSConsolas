@@ -22,13 +22,14 @@ def Test(app):
     print("System Configuration:")
     print(app.configuration)
     if not app.data is None:
-       print("Data:")
-       print(app.data.dump())
+        print("Data:")
+        print(app.data.dump())
+        # iterate the configuration keys
+        s = ""
+        for key in app.data:
+            s = s + " " + str(app.data[key])
+        print(s.strip())
     print("")
-    s = ""
-    for key in app.data:
-        s = s + " " + str(app.data[key])
-    print(s.strip())
     # injected logger
     app.logger.warning("hello from the injected loggger")
     # Using explicitely the root logger always logs to the console
