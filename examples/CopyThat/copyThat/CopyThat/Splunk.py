@@ -15,30 +15,31 @@ class SplunkDeployer:
     def __init__(self):
         pass
 
-    def _getAppDir(self, appname):
+    def _getAppDirConfig(self, appname):
         try:
-            appdir = self.app.configuration.get("Splunk.apps")[appname].get("directory")
-            print(appdir)
+            appconfig = self.app.configuration.get("Splunk.apps")[appname]
+            appdir = appconfig.get("directory")
             if not os.path.isdir(appdir):
                 raise AppNotFoundException("The app \"" + appname  + "\" does not exist in \"" + appdir + "\".")
-            return appdir
+            return [appdir, appconfig] 
         except AppNotFoundException as e:
             raise e
         except:
             pass
+        appconfig = self.app.configuration.get("Splunk.apps.default")
         appdir = os.path.join(
-            self.app.configuration.get("Splunk.apps.default.directory"),
+            appconfig.get("directory"),
             appname
         )
         print(appdir)
         if not os.path.isdir(appdir):
             raise AppNotFoundException("The app \"" + appname  + "\" does not exist in \"" + appdir + "\".")
-        return appdir
+        return [appdir, appconfig]
 
     def _deployApp(self, appname):
         self.app.logger.info("Deploying splunk app: " + appname)
-        appdir = self._getAppDir(appname)
-        self.app.logger.debug("\tApp found in path: " + appname)
+        appdir, appconfig = self._getAppDirConfig(appname)
+        self.app.logger.debug("\tApp found in path: " + appdir)
 
     def deploy(self, app):
         self.app = app
