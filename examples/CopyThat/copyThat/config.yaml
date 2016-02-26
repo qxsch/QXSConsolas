@@ -5,6 +5,10 @@
 #myapp:
 #  foo: bar
 #  bar: [1, 2]
+Splunk:
+  apps:
+    default:
+      directory: /opt/apps/
 
 routes:
   version: 1

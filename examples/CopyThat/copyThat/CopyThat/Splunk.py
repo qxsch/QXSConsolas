@@ -17,37 +17,29 @@ class SplunkDeployer:
 
     def _getAppDir(self, appname):
         try:
-            appdir = (
-                os.path.join(
-                    self.app.configuration.get("Splunk.apps.default.directory") 
-                ),
-                appname
-            )
+            appdir = self.app.configuration.get("Splunk.apps")[appname].get("directory")
+            print(appdir)
             if not os.path.isdir(appdir):
-                raise AppNotFoundException("The app \"" + app  + "\" does not exist.")
+                raise AppNotFoundException("The app \"" + appname  + "\" does not exist in \"" + appdir + "\".")
             return appdir
         except AppNotFoundException as e:
             raise e
         except:
             pass
-        appdir = (
-            os.path.join(
-                self.app.configuration.get("Splunk.apps.default.directory") 
-            ),
+        appdir = os.path.join(
+            self.app.configuration.get("Splunk.apps.default.directory"),
             appname
         )
+        print(appdir)
         if not os.path.isdir(appdir):
-            raise AppNotFoundException("The app \"" + app  + "\" does not exist.")
+            raise AppNotFoundException("The app \"" + appname  + "\" does not exist in \"" + appdir + "\".")
         return appdir
 
     def _deployApp(self, appname):
         self.app.logger.info("Deploying splunk app: " + appname)
-        os.path.isdir(
-            os.path.join(
-                self.app.configuration.get("Splunk.apps.default.directory") 
-            ),
-            appname
-        )
+        appdir = self._getAppDir(appname)
+        self.app.logger.debug("\tApp found in path: " + appname)
+
     def deploy(self, app):
         self.app = app
         if not "--env:" in self.app.options:
