@@ -20,9 +20,12 @@ class Configuration:
         else:
             self.configuration = configData
 
-    def getValueAsConfiguration(self, path):
-        return Configuration(configData = self.getValue(path))
-
+    def get(self, path):
+        val = self.getValue(path) 
+        if isinstance(val, dict) or isinstance(val, list):
+            return Configuration(configData = val)
+        else:
+            return val
     def pathExists(self, path):
         _cfg = self.configuration
         try:
@@ -48,7 +51,7 @@ class Configuration:
                 raise ConfigurationException("The key \"" + fullCurrentKey + "\" does not exist and hence the key \"" + path + "\" does not exist.")
 
     def dump(self):
-        return str(yaml.dump(self.configuration)).strip()
+        return str(yaml.dump(self.configuration)).rstrip()
 
     def __getitem__(self, key):
         if isinstance(self.configuration[key], dict) or isinstance(self.configuration[key], list):

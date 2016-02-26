@@ -19,8 +19,15 @@ routes:
     description: |
       This is an advanced git deployment tool.
       It does so many wonderful things. Wow. Amazing.
-    footer: Powered by QXS Consolas
+    #footer: Powered by QXS Consolas
+    footer: Powered by BVT
   cliapps:
+    DeployApp:
+      func: CopyThat.Splunk.DeployApp
+      description: Deploy an app to splunk
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
     Test:
       func: CopyThat.Test.Test
       description: My little test

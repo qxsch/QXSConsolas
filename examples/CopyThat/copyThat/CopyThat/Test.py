@@ -40,5 +40,8 @@ def Test(app):
     myapp_cli_logger.warning("This is a warning from myapp.cli")  # -> sample.log
     myapp_cli_logger.error("This is an error from myapp.cli")  # -> sample.log
     myapp_cli_logger.critical("This is a critical from myapp.cli")  # -> sample.log
+    print(call(["echo", ["hi", "$x", "a"]], shell = True))
+    print(call(["./test.sh", "QXS"], shell = True))
+    print(call(["./test.sh", "QXS"], shell = False))
     print(1/0)
    
