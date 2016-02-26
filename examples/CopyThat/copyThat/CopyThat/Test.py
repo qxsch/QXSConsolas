@@ -2,6 +2,7 @@
 
 import logging
 from QXSConsolas.Cli import CliApp
+from QXSConsolas.Command import SSH, call
 
 @CliApp(
     Name = "Tests something",
