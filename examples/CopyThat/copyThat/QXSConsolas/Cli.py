@@ -45,7 +45,7 @@ class ArgumentParser:
             if not finalKey in definitions:
                 definitions[finalKey] = { "referencedBy": [] }
             if key == finalKey:
-                for subKey in ["description", "default", "multiple", "references", "valuename"]:
+                for subKey in ["description", "default", "required", "multiple", "references", "valuename"]:
                     definitions[finalKey][subKey] = self._opts[finalKey][subKey]
             else:
                 definitions[finalKey]["referencedBy"].append(key)
@@ -63,6 +63,7 @@ class ArgumentParser:
         argument,
         description = "",
         default = None,
+        required = False,
         multiple = False,
         references = None,
         valuename = "VALUE"
@@ -76,6 +77,7 @@ class ArgumentParser:
         self._opts[argument] = {
             "description": str(description),
             "default": default,
+            "required": bool(required),
             "multiple": bool(multiple),
             "references": references,
             "valuename": str(valuename)
@@ -184,7 +186,12 @@ class ArgumentParser:
                self._setOption(lastKey, None, lastKeyOptDef)
             else:
                raise ArgumentParserException("The option \"" + lastKey + "\" requires a value.")
-
+        # check all required arguments
+        for key in self._opts:
+            key = self._resolveFinalKey(key)
+            if self._opts[key]["required"]:
+                if not key in self.options:
+                    raise ArgumentParserException("The option \"" + key + "\" is required!")
         return (self.options, self.arguments)
 
 
@@ -283,7 +290,10 @@ class Application:
             s += "   (Default: " + str(defBlock["default"]) + ")"
 
         if defBlock["multiple"]:
-            s += "   (Multiple times allowed)"
+            s += "   (" + colored.cyan("Multiple times allowed") + ")"
+
+        if defBlock["required"]:
+            s += "   (" + colored.red("Required") + ")"
 
         if str(defBlock["description"]) != "":
             s += "\n    "
@@ -321,7 +331,41 @@ class Application:
             self.data = data
 
         self.options, self.arguments = self._argparser.parseArguments(argv)
-        self._app(self)
+        self._app(ApplicationData(self))
+
+
+class ApplicationData:
+    name = None
+    description = None
+    data = None
+    configuration = None
+    logger = None
+    options = dict()
+    arguments = list()
+
+    def __init__(
+        self,
+        app
+    ):
+        """
+        Creates the application data
+        app the Application object
+        """
+        assert isinstance(app, Application), "An application object is required!"
+        self.data = app.data
+        self.logger = app.logger
+        self.configuration = app.configuration
+        self.options = app.options
+        self.arguments = app.arguments
+        self.name = app.name
+        self.description = app.description
+
+    def log(self, message, level="info"):
+        if hasattr(self.logger, level):
+            l = getattr(self.logger, level)
+            l(message)
+        else:
+            self.loggger.info(message)
 
 
 def CliApp(
@@ -347,6 +391,7 @@ def CliApp(
         Each dict can contain the following options:
             description is a string, that describes the argument
             default     is a default value, that will be used in case a value is absent
+            required    is a bool, in case of True, the argument is required
             multiple    is a bool, in case of True, the argument can be used multiple times
             references  is a string, that holds the reference to another argument dict definition
             valuename   is a string, that will be shown in the help as the VALUE placeholder

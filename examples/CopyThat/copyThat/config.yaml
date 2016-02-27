@@ -6,6 +6,47 @@
 #  foo: bar
 #  bar: [1, 2]
 Splunk:
+  envs:
+    PROD:
+      searchheads:
+        servers:
+          localhost:
+            hostname: "localhost"
+            path: "/opt/shd-apps"
+        prelocal:
+          - [ "echo", "hi shd pre" ]
+        preremote:
+          - [ "echo", "hi shd pre" ]
+        postlocal:
+          - [ "echo", "hi shd post" ]
+        postremote:
+          - [ "echo", "hi shd post" ]
+      indexers:
+        servers:
+          localhost:
+            hostname: "localhost"
+            path: "/opt/idx-apps"
+        prelocal:
+          - [ "echo", "hi idx pre" ]
+        preremote:
+          - [ "echo", "hi idx pre" ]
+        postlocal:
+          - [ "echo", "hi idx post" ]
+        postremote:
+          - [ "echo", "hi idx post" ]
+      deployments:
+        servers:
+          localhost:
+            hostname: "localhost"
+            path: "/opt/dpl-apps"
+        prelocal:
+          - [ "echo", "hi dpl pre" ]
+        preremote:
+          - [ "echo", "hi dpl pre" ]
+        postlocal:
+          - [ "echo", "hi dpl post" ]
+        postremote:
+          - [ "echo", "hi dpl post" ]
   apps:
     default:
       directory: /opt/apps/
@@ -58,9 +99,9 @@ logging:
     handlers: [console]
 
   loggers:
-    myapp.cli:
-      #level: !!python/name:logging.WARN
-      level: !!python/name:logging.INFO
+    deploy.app:
+      level: !!python/name:logging.NOTSET
+      #level: !!python/name:logging.INFO
       handlers: [console, logfile, splunklogfile]
       qualname: myapp.cli
       propagate: false
@@ -81,6 +122,11 @@ logging:
       stream: ext://sys.stdout
       formatter: consoleFormatter
       level: !!python/name:logging.NOTSET
+    fullConsole:
+      class: logging.StreamHandler
+      stream: ext://sys.stdout
+      formatter: fullConsoleFormatter
+      level: !!python/name:logging.NOTSET
 
   formatters:
     splunkFormatter:
@@ -93,8 +139,14 @@ logging:
       datefmt: '%Y-%m-%d %H:%M:%S'
     consoleFormatter:
       '()': QXSConsolas.ColoredFormatter
-      format: '[$color_fg_blue%(name)-15s$color_reset][$color_fg_magenta%(asctime)s$color_reset][$color_level%(levelname)-8s$color_reset] $color_level%(message)s$color_reset'
+      format: '[$color_level%(levelname)-8s$color_reset] $color_level%(message)s$color_reset'
       datefmt: '%Y-%m-%d %H:%M:%S'
       exceptionfmt: "Traceback (most recent call last):\n$color_fg_magenta%(traceback)s$color_reset\n$color_fg_yellow%(classname)s$color_reset: $color_reset$color_fg_red%(message)s$color_reset"
+    fullConsoleFormatter:
+      '()': QXSConsolas.ColoredFormatter
+      format: '[%(name)-15s][$color_fg_magenta%(asctime)s$color_reset][$color_level%(levelname)-8s$color_reset] $color_level%(message)s$color_reset'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+      exceptionfmt: "Traceback (most recent call last):\n$color_fg_magenta%(traceback)s$color_reset\n$color_fg_yellow%(classname)s$color_reset: $color_reset$color_fg_red%(message)s$color_reset"
+
 
 
