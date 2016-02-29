@@ -3,18 +3,29 @@
 import logging, os
 from QXSConsolas.Configuration import Configuration
 from QXSConsolas.Cli import CliApp
-from QXSConsolas.Command import SSH, call
+from QXSConsolas.Command import SSH, call, replaceVars
 from clint.textui import puts, colored, indent
+from SplunkRoles import getSplunkRoles
 import timeit
 
+
+class NoRolesToDeployException(Exception):
+    pass
+class DeploymentException(Exception):
+    pass
 class AppNotFoundException(Exception):
     pass
 
 class SplunkDeployer:
     app = None
+    _roles = {
+        "SHD": None,
+        "IDX": None,
+        "UFM": None
+    }
 
     def __init__(self):
-        pass
+        self._roles = getSplunkRoles()
 
     def _getAppDirConfig(self, appname):
         try:
@@ -52,13 +63,91 @@ class SplunkDeployer:
         return None
     
     def _deployAppToEnv(self, appname, appdir, appconfig, envname, envconfig):
+        s = SSH()
+        # configuration check
         for role in envconfig:
-            self.app.logger.info("Deploying to environment \"" + envname + "\" role \"" + role + "\"")
+            assert "role" in envconfig[role], "The key \"Splunk.envs.'" + envname + "'.'" + role + "'.role\" is missing"
+            assert envconfig[role]["role"] in self._roles, "The key \"Splunk.envs.'" + envname + "'.'" + role + "'.role\" is not properly configured. Found \"" + envconfig[role]["role"] + "\", but expecting one of: " + ", ".join(self._roles.keys())
             for server in envconfig[role]["servers"]:
                 srv = envconfig[role]["servers"][server]
                 assert isinstance(srv, Configuration), "The role \"" + role + "\" in environment \"" + envname + "\" is not properly configured."
                 for key in ["hostname", "path"]:
-                    assert type(srv[key]) == str, "The role \"" + role + "\" in environment \"" + envname + "\" is not properly configured for key \"" + key + "\"."
+                    assert key in srv, "The key \"Splunk.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is missing"
+                    assert type(srv[key]) == str and srv[key] != "", "The key \"Splunk.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is not properly configured"
+        # check where to deploy && run optional pre local
+        deployToRoles = []
+        for role in envconfig:
+            for server in envconfig[role]["servers"]:
+                srv = envconfig[role]["servers"][server]
+                s.host = srv["hostname"]
+                remoteappdir = os.path.join(srv["path"], appname)
+                rc, stdout, stderr = s.call([ "test", "-d", os.path.join(srv["path"], appname) ])
+                if rc != 0:
+                    self.app.logger.debug("Won't deploy to role \"" + role + "\" in environment \"" + envname + "\", because the app does not exist on server \"" + srv["hostname"] + "\"")
+                    continue
+                deployToRoles.append(role)
+        # run optional pre local && pre remote commands
+        for role in deployToRoles:
+            if not self._runRoleCommand(envconfig[role], "prelocal", None, appdir):
+                self.app.logger.debug("Won't deploy to role \"" + role + "\" in environment \"" + envname + "\", because of a failed prelocal command")
+                deployToRoles.remove(role)
+            else:
+                for server in envconfig[role]["servers"]:
+                    srv = envconfig[role]["servers"][server]
+                    s.host = srv["hostname"]
+                    remoteappdir = os.path.join(srv["path"], appname)
+                    if not self._runRoleCommand(envconfig[role], "preremote", s, remoteappdir):
+                        self.app.logger.debug("Won't deploy to role \"" + role + "\" in environment \"" + envname + "\", because of a failed preremote command on server \"" + srv["hostname"] + "\"")
+                        deployToRoles.remove(role)
+                        break;
+        if not deployToRoles:
+            raise NoRolesToDeployException("Cannot deploy the app \"" + appname + "\" to any roles for environment \"" + envname + "\"")
+        # deploy app to servers 
+        for role in deployToRoles:
+            self.app.logger.info("Deploying to environment \"" + envname + "\" role \"" + role + "\" (" + envconfig[role]["role"] + ")")
+            self._roles[envconfig[role]["role"]].setRoleInfo(self.app, appname, appdir, appconfig, envname, envconfig, role, envconfig[role])
+            for server in envconfig[role]["servers"]:
+                srv = envconfig[role]["servers"][server]
+                s.host = srv["hostname"]
+                remoteappdir = os.path.join(srv["path"], appname)
+                self.app.logger.debug("Deploying app to server: " + srv["hostname"] + ":" + srv["path"])
+                self._roles[envconfig[role]["role"]].deployAppToServer(s, remoteappdir, srv)
+        # run optional post local && post remote commands
+        for role in deployToRoles:
+            self._runRoleCommand(envconfig[role], "postlocal", None, appdir)
+            for server in envconfig[role]["servers"]:
+                srv = envconfig[role]["servers"][server]
+                s.host = srv["hostname"]
+                remoteappdir = os.path.join(srv["path"], appname)
+                self._runRoleCommand(envconfig[role], "postremote", s, remoteappdir)
+
+    def _runRoleCommand(self, roleconfig, key, ssh, appdir):
+        if not(key in roleconfig and isinstance(roleconfig[key], Configuration)):
+            return True # wrong configuration, nothign done successfully
+        for cmdkey in roleconfig[key]:
+            if isinstance(roleconfig[key][cmdkey].configuration, list):
+                cmd = replaceVars(
+                    roleconfig[key][cmdkey].configuration,
+                    {
+                        "trigger": key,
+                        "appdir": appdir
+                    }
+                )
+                if ssh is None:
+                    rc, stdout, stderr = call(cmd, shell=True)
+                    if rc != 0:
+                        self.app.logger.warning(key.upper()  + " Command " + str(cmd) + " failed with rc " + rc + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                        return False
+                    else:
+                        self.app.logger.debug(key.upper() + " Command " + str(cmd) + " was successful:\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                else:
+                    rc, stdout, stderr = ssh.call(cmd)
+                    if rc != 0:
+                        self.app.logger.warning(key.upper()  + " Command " + str(cmd) + " failed on host \"" + ssh.host + "\" with rc " + rc + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                        return False
+                    else:
+                        self.app.logger.debug(key.upper() + " Command " + str(cmd) + " was successful on host \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+        return True
 
     def _deployApp(self, appname):
         self.app.logger.info("Deploying splunk app: " + appname)
@@ -77,18 +166,6 @@ class SplunkDeployer:
                 self._deployAppToEnv(appname, appdir, appconfig, env, envs[env])
             else:
                 raise RuntimeError("The environment \"" + env + "\" does not exist.")
-        """
-        1. check is git folder? --> git pull
-        2. deploy to env
-          2.2. for every type (idx, sh, fwd):
-            2.2.1. pre commands
-            2.2.2. check where to deploy? --> copy destination
-            2.2.3. post commands
-        print(call(["ssh", "localhost", ["echo", "hi"]], shell = True))
-        print(call(["ssh", "localhost", ["echo", "hi"]], shell = False))
-        s = SSH("localhost")
-        print(s.call(["echo", "hi"]))
-        """
 
     def deploy(self, app):
         self.app = app

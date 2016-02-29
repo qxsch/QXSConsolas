@@ -1,10 +1,12 @@
 import re
 import sys, os
 import subprocess
+from string import Template
 
 
 class SSH:
     _command = []
+    host = None
     stdin = None
     stdout = None
     stderr = None
@@ -82,6 +84,12 @@ def call(
     out, err = p.communicate()
     return [p.returncode, out, err]
 
+
+def replaceVars(cmd, variables):
+    newcmd = []
+    for s in cmd:
+        newcmd.append(Template(s).safe_substitute(variables))
+    return newcmd
 
 def quoteAsList(data):
     l = []

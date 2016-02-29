@@ -18,6 +18,7 @@ class ArgumentParser:
 
     options = {}
     arguments = []
+    loglevel = 0 # 0 = normal, -1 = quiet, 1 = verbose
 
     def __init__(self, opts = []):
         """
@@ -127,6 +128,7 @@ class ArgumentParser:
         Returns (options, arguments)
         Also sets the options and arguments properties
         """
+        self.loglevel = 0
         self.options = {}
         self.arguments = []
         # None? use sys.argv
@@ -164,6 +166,10 @@ class ArgumentParser:
             # short / long match?
             m = reOpt.match(arg)
             if not m is None:
+                if m.group(1) == "-v":
+                    self.loglevel = 1
+                elif m.group(1) == "-q":
+                    self.loglevel = -1
                 if m.group(1) in self._opts:
                     self._setOption(m.group(1), None, self._opts[m.group(1)])
                 elif m.group(1) + ":" in self._opts:
@@ -318,6 +324,14 @@ class Application:
             puts(self.description + "\n")
         for key in definition:
             puts(self.formatArgumentDefinitionBlock(key, definition[key]))
+        puts(self.formatArgumentDefinitionBlock("-v", { "description": "Enable debug to console output (Be verbose)", "default": None, "required": False, "multiple": False, "referencedBy": [], "valuename": "VALUE" }))
+        puts(self.formatArgumentDefinitionBlock("-q", { "description": "Disable all console output (Be quiet)", "default": None, "required": False, "multiple": False, "referencedBy": [], "valuename": "VALUE" }))
+
+    def _configureConsoleLoggers(self, level):
+        for h in self.logger.handlers:
+            if type(h) == logging.StreamHandler:
+                if h.stream == sys.stdout:
+                    h.setLevel(level)
 
     def run(self, argv = None, data = None, logger = None):
         """
@@ -331,6 +345,11 @@ class Application:
             self.data = data
 
         self.options, self.arguments = self._argparser.parseArguments(argv)
+        if self._argparser.loglevel == 1:
+            self._configureConsoleLoggers(logging.NOTSET)
+        elif self._argparser.loglevel == -1:
+            self._configureConsoleLoggers(logging.CRITICAL)
+            
         self._app(ApplicationData(self))
 
 

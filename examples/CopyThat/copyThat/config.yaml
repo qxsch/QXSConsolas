@@ -9,44 +9,47 @@ Splunk:
   envs:
     PROD:
       searchheads:
+        role: SHD
         servers:
           localhost:
             hostname: "localhost"
             path: "/opt/shd-apps"
         prelocal:
-          - [ "echo", "hi shd pre" ]
+          - [ "echo", "hi shd pre", "$trigger", "$appdir" ]
         preremote:
-          - [ "echo", "hi shd pre" ]
+          - [ "echo", "hi shd pre", "$trigger", "$appdir" ]
         postlocal:
-          - [ "echo", "hi shd post" ]
+          - [ "echo", "hi shd post", "$trigger", "$appdir" ]
         postremote:
-          - [ "echo", "hi shd post" ]
+          - [ "echo", "hi shd post", "$trigger", "$appdir" ]
       indexers:
+        role: IDX
         servers:
           localhost:
             hostname: "localhost"
             path: "/opt/idx-apps"
         prelocal:
-          - [ "echo", "hi idx pre" ]
+          - [ "echo", "hi idx pre", "$trigger", "$appdir" ]
         preremote:
-          - [ "echo", "hi idx pre" ]
+          - [ "echo", "hi idx pre", "$trigger", "$appdir" ]
         postlocal:
-          - [ "echo", "hi idx post" ]
+          - [ "echo", "hi idx post", "$trigger", "$appdir" ]
         postremote:
-          - [ "echo", "hi idx post" ]
+          - [ "echo", "hi idx post", "$trigger", "$appdir" ]
       deployments:
+        role: UFM
         servers:
           localhost:
             hostname: "localhost"
             path: "/opt/dpl-apps"
         prelocal:
-          - [ "echo", "hi dpl pre" ]
+          - [ "echo", "hi dpl pre", "$trigger", "$appdir" ]
         preremote:
-          - [ "echo", "hi dpl pre" ]
+          - [ "echo", "hi dpl pre", "$trigger", "$appdir" ]
         postlocal:
-          - [ "echo", "hi dpl post" ]
+          - [ "echo", "hi dpl post", "$trigger", "$appdir" ]
         postremote:
-          - [ "echo", "hi dpl post" ]
+          - [ "echo", "hi dpl post", "$trigger", "$appdir" ]
   apps:
     default:
       directory: /opt/apps/
@@ -121,7 +124,7 @@ logging:
       class: logging.StreamHandler
       stream: ext://sys.stdout
       formatter: consoleFormatter
-      level: !!python/name:logging.NOTSET
+      level: !!python/name:logging.INFO
     fullConsole:
       class: logging.StreamHandler
       stream: ext://sys.stdout
