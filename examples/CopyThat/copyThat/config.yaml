@@ -14,6 +14,7 @@ Splunk:
           localhost:
             hostname: "localhost"
             path: "/opt/shd-apps"
+            target: "https://test:test@localhost:8089/"
         prelocal:
           - [ "echo", "hi shd pre", "$trigger", "$appdir" ]
         preremote:
@@ -28,6 +29,7 @@ Splunk:
           localhost:
             hostname: "localhost"
             path: "/opt/idx-apps"
+            target: "https://test:test@localhost:8089/"
         prelocal:
           - [ "echo", "hi idx pre", "$trigger", "$appdir" ]
         preremote:
@@ -42,6 +44,7 @@ Splunk:
           localhost:
             hostname: "localhost"
             path: "/opt/dpl-apps"
+            target: "https://test:test@localhost:8089/"
         prelocal:
           - [ "echo", "hi dpl pre", "$trigger", "$appdir" ]
         preremote:
@@ -104,9 +107,8 @@ logging:
   loggers:
     deploy.app:
       level: !!python/name:logging.NOTSET
-      #level: !!python/name:logging.INFO
       handlers: [console, logfile, splunklogfile]
-      qualname: myapp.cli
+      qualname: deploy.app
       propagate: false
 
   handlers:
