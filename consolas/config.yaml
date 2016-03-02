@@ -1,0 +1,87 @@
+%YAML 1.2
+---
+# Config  for my application
+# --------------------------
+Your:
+  Custom:
+    Config:
+      - goes
+      - here
+
+routes:
+  version: 1
+  list:
+    header: |
+      _________                            .__                 
+      \_   ___ \  ____   ____   __________ |  | _____    ______
+      /    \  \/ /  _ \ /    \ /  ___/  _ \|  | \__  \  /  ___/
+      \     \___(  <_> )   |  \\___ (  <_> )  |__/ __ \_\___ \ 
+       \______  /\____/|___|  /____  >____/|____(____  /____  >
+              \/            \/     \/                \/     \/ 
+    description: |
+      This is an advanced git deployment tool.
+      It does so many wonderful things. Wow. Amazing.
+    footer: Powered by QXS Consolas
+  cliapps:
+    Test:
+      func: Test.Test.Test
+      description: My little test
+      #showCliName: True
+      #showCliDescription: True
+      showCliName: False
+      showCliDescription: False
+      logger: myapp.cli
+      data:
+        - this
+        - is
+        - some
+        - data
+
+# Config for logging
+# ------------------
+# See http://docs.python.org/2.7/library/logging.config.html#configuration-dictionary-schema
+logging:
+  version: 1
+  disable_existing_loggers: true
+
+  # Configuring the default (root) logger is highly recommended
+  root:
+    level: !!python/name:logging.NOTSET
+    handlers: [console]
+
+  loggers:
+    myapp.cli:
+      level: !!python/name:logging.NOTSET
+      handlers: [console]
+      qualname: deploy.app
+      propagate: false
+
+  handlers:
+    logfile:
+      class: logging.FileHandler
+      filename: sample.log
+      formatter: simpleFormatter
+      level: !!python/name:logging.NOTSET
+    console:
+      class: logging.StreamHandler
+      stream: ext://sys.stdout
+      formatter: consoleFormatter
+      level: !!python/name:logging.INFO
+
+  formatters:
+    splunkFormatter:
+      class: !!python/name:logging.Formatter
+      format: '%(asctime)s app=%(name)s severity=%(levelname)s message=%(message)s'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+    simpleFormatter:
+      class: !!python/name:logging.Formatter
+      format: '[%(name)-15s][%(asctime)s][%(levelname)-8s] %(message)s'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+    consoleFormatter:
+      '()': QXSConsolas.ColoredFormatter
+      format: '[%(name)-15s][$color_fg_magenta%(asctime)s$color_reset][$color_level%(levelname)-8s$color_reset] $color_level%(message)s$color_reset'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+      exceptionfmt: "Traceback (most recent call last):\n$color_fg_magenta%(traceback)s$color_reset\n$color_fg_yellow%(classname)s$color_reset: $color_reset$color_fg_red%(message)s$color_reset"
+
+
+
