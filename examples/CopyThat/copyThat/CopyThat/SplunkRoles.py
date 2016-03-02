@@ -6,6 +6,8 @@ from clint.textui import puts, colored, indent
 import timeit
 import abc
 from urlparse import urlparse
+#from CopyThat.Splunk import DeploymentException
+import CopyThat.Splunk
 
 class SplunkRole(object):
     __metaclass__ = abc.ABCMeta
@@ -63,7 +65,13 @@ class SplunkRole(object):
 
     def _syncLocalAppToRemote(self, ssh, remoteappdir, srvconfig):
         # use rsync
-        pass
+        rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", self._appdir + "/", ssh.host + ":" + remoteappdir + "/"])
+        if rc == 0:
+            self.app.logger.debug("Syncing the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            return True
+        else:
+            self.app.logger.error("Failed to sync the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            return False
 
     def _removeFileFromApp(self, ssh, remoteappdir, filename):
         rc, stdout, stderr = ssh.call(["find", remoteappdir, "-name", filename, "-print", "-delete" ])
@@ -85,12 +93,25 @@ class SearchHeadRole(SplunkRole):
         srvconfig    QXSConsolas.Configuration.Configuration
                      server configuration with hostname and path
 	"""
-        self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig)
+        if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
+            raise CopyThat.Splunk.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         self._removeFileFromApp(ssh, remoteappdir, "indexes.conf")
+        # runnign the shd deployment
         url, user, password = splitUrlCreds(srvconfig)
-        print(splitUrlCreds(srvconfig))
-        #rc, stdout, stderr = ssh.call([])
-        #splunk apply shcluster-bundle --answer-yes -target https://hostname:port -auth user:pw
+        cmd = [ "splunk", "apply", "shcluster-bundle", "--answer-yes" ]
+        if not (url is None or url == ""):
+            cmd.append("-target")
+            cmd.append(url)
+        if not (user is None or user == "" or password is None or password == ""):
+            cmd.append("-auth")
+            cmd.append(user + ":" + password)
+        rc, stdout, stderr = ssh.call(cmd)
+        if rc == 0:
+            self.app.logger.debug("Appling the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+        else:
+            self.app.logger.error("Failed to apply the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+        #rc, stdout, stderr = ssh.call(cmd)
+
 
 class IndexerRole(SplunkRole):
     def deployAppToServer(self, ssh, remoteappdir, srvconfig):
@@ -103,11 +124,22 @@ class IndexerRole(SplunkRole):
         srvconfig    QXSConsolas.Configuration.Configuration
                      server configuration with hostname and path
 	"""
-        self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig)
+        if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
+            raise CopyThat.Splunk.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
+        # runnign the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
-        print(splitUrlCreds(srvconfig))
-        #rc, stdout, stderr = ssh.call([])
-        #splunk apply cluster-bundle --answer-yes -target https://hostname:port -auth user:pw
+        cmd = [ "splunk", "apply", "cluster-bundle", "--answer-yes" ]
+        if not (url is None or url == ""):
+            cmd.append("-target")
+            cmd.append(url)
+        if not (user is None or user == "" or password is None or password == ""):
+            cmd.append("-auth")
+            cmd.append(user + ":" + password)
+        rc, stdout, stderr = ssh.call(cmd)
+        if rc == 0:
+            self.app.logger.debug("Appling the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+        else:
+            self.app.logger.error("Failed to apply the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
 
 class UnifiedForwarderManagementRole(SplunkRole):
@@ -121,12 +153,23 @@ class UnifiedForwarderManagementRole(SplunkRole):
         srvconfig    QXSConsolas.Configuration.Configuration
                      server configuration with hostname and path
 	"""
-        self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig)
+        if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
+            raise CopyThat.Splunk.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         self._removeFileFromApp(ssh, remoteappdir, "indexes.conf")
+        # runnign the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
-        print(splitUrlCreds(srvconfig))
-        #rc, stdout, stderr = ssh.call([])
-        #splunk reload deploy-server --answer-yes -target https://hostname:port -auth user:pw
+        cmd = [ "splunk", "reload", "deploy-server", "--answer-yes" ]
+        if not (url is None or url == ""):
+            cmd.append("-target")
+            cmd.append(url)
+        if not (user is None or user == "" or password is None or password == ""):
+            cmd.append("-auth")
+            cmd.append(user + ":" + password)
+        rc, stdout, stderr = ssh.call(cmd)
+        if rc == 0:
+            self.app.logger.debug("Reloading the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+        else:
+            self.app.logger.error("Failed to reload the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
 
 def splitUrlCreds(url):

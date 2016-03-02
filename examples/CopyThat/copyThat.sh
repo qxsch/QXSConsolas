@@ -18,7 +18,7 @@ echo "----- running copyThat.py -----"
 echo
 echo "------ log file ---------------"
 cat "$(dirname "$0")/sample.log"
-echo
-echo "------ splunk log file --------"
-cat "$(dirname "$0")/splunksample.log"
+#echo
+#echo "------ splunk log file --------"
+#cat "$(dirname "$0")/splunksample.log"
 
