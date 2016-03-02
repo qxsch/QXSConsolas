@@ -19,7 +19,7 @@ routes:
        \______  /\____/|___|  /____  >____/|____(____  /____  >
               \/            \/     \/                \/     \/ 
     description: |
-      This is a demo application QXS Consolas.
+      This is a demo application of QXS Consolas.
       It features:
         * clint
         * a cli routing framework
