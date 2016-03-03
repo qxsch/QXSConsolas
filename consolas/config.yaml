@@ -19,8 +19,13 @@ routes:
        \______  /\____/|___|  /____  >____/|____(____  /____  >
               \/            \/     \/                \/     \/ 
     description: |
-      This is an advanced git deployment tool.
-      It does so many wonderful things. Wow. Amazing.
+      This is a demo application of QXS Consolas.
+      It features:
+        * clint
+        * a cli routing framework
+        * logging, data, configuration, ... injection to the cli controller / application
+        * an easy to use configuration object
+        * ColoredConsoleFormatter
     footer: Powered by QXS Consolas
   cliapps:
     Test:
