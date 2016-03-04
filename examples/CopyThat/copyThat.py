@@ -20,7 +20,9 @@ try:
             "config.yaml"
         )
     )
-    QXSConsolas.run()
+    sys.exit(
+        QXSConsolas.run()
+    )
 except Exception as e:
     logging.exception(e)
 

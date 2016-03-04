@@ -369,13 +369,13 @@ class Application:
             self._configureConsoleLoggers(logging.CRITICAL)
         try:
             self._argparser.validateRequiredArguments()
-            self._app(ApplicationData(self))
+            return self._app(ApplicationData(self))
         except Exception as e:
             if self._argparser.loglevel == 1:
                 self.logger.exception(e)
             else:
 		self.logger.error(e)
-                
+            return 1
 
 
 class ApplicationData:

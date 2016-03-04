@@ -40,7 +40,7 @@ def run():
             data = Configuration(configData = config[cmdname]["data"])
         except:
             pass
-        app.run(data = data, logger = logger)
+        return app.run(data = data, logger = logger)
     elif len(sys.argv) > 2 and sys.argv[2] in config and sys.argv[1] == "help":
         modulename = ".".join(config[sys.argv[2]]["func"].split('.')[0:-1])
         classname = config[sys.argv[2]]["func"].split('.')[-1]
@@ -110,4 +110,5 @@ def run():
             puts("\n" + SysConf().getValue("routes.list.footer").rstrip() + "\n")
         except:
             pass
+    return 1
 
