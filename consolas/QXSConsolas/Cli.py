@@ -121,8 +121,20 @@ class ArgumentParser:
             else:
                 self.options[key] = value
 
+    def parse(self, argv=None):
+        """
+        Parses the argument with argv as a list
+        In case argv is None sys.argv will be used
+        Returns (options, arguments)
+        Also sets the options and arguments properties
+        """
+        self.parseArguments(argv)
+        self.validateRequiredArguments()
+        return (self.options, self.arguments)
+
     def parseArguments(self, argv=None):
         """
+        PLEASE USE parse() UNLESS YOU KNOW WHAT YOU DO
         Parses the argument with argv as a list
         In case argv is None sys.argv will be used
         Returns (options, arguments)
@@ -186,19 +198,25 @@ class ArgumentParser:
                     self.arguments.append(arg)
                     continue
             self.arguments.append(arg)
-        # check if we hav a lastKey entry
+        # check if we have a lastKey entry
         if not lastKey is None:
             if lastKeyIsOptional:
                self._setOption(lastKey, None, lastKeyOptDef)
             else:
                raise ArgumentParserException("The option \"" + lastKey + "\" requires a value.")
+        return (self.options, self.arguments)
+
+    def validateRequiredArguments(self):
+        """
+        PLEASE USE parse() UNLESS YOU KNOW WHAT YOU DO
+        Validattes Required Arguments
+        """
         # check all required arguments
         for key in self._opts:
             key = self._resolveFinalKey(key)
             if self._opts[key]["required"]:
                 if not key in self.options:
                     raise ArgumentParserException("The option \"" + key + "\" is required!")
-        return (self.options, self.arguments)
 
 
 
@@ -349,8 +367,15 @@ class Application:
             self._configureConsoleLoggers(logging.NOTSET)
         elif self._argparser.loglevel == -1:
             self._configureConsoleLoggers(logging.CRITICAL)
-            
-        self._app(ApplicationData(self))
+        try:
+            self._argparser.validateRequiredArguments()
+            self._app(ApplicationData(self))
+        except Exception as e:
+            if self._argparser.loglevel == 1:
+                self.logger.exception(e)
+            else:
+		self.logger.error(e)
+                
 
 
 class ApplicationData:

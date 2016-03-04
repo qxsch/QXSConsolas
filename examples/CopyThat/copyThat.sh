@@ -2,8 +2,9 @@
 
 find "$(dirname "$0")/" -name '*.pyc' -type f -delete 
 
+rm "$(dirname "$0")/sample.log"
+
 "${0/.sh/.py}" "$@"
 
-cd "$(dirname "$0")"
 echo "------ sample log ------"
-cat sample.log
+cat "$(dirname "$0")/sample.log"
