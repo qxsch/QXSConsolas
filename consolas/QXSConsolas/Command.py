@@ -32,15 +32,24 @@ class SSH:
 
     def call(self, command):
         assert isinstance(command, list), "Please specify a command list"
-
-        return call(
-            quoteAsList(self._command + [ self.host, command ]),
-            stdin  = self.stdin,
-            stdout = self.stdout,
-            stderr = self.stderr,
-            env    = self.env,
-            shell  = False
-        )
+        if self.host == "localhost":
+            return call(
+                quoteAsList(command),
+                stdin  = self.stdin,
+                stdout = self.stdout,
+                stderr = self.stderr,
+                env    = self.env,
+                shell  = True
+            )
+        else:
+            return call(
+                quoteAsList(self._command + [ self.host, command ]),
+                stdin  = self.stdin,
+                stdout = self.stdout,
+                stderr = self.stderr,
+                env    = self.env,
+                shell  = False
+            )
 
 
 def call(

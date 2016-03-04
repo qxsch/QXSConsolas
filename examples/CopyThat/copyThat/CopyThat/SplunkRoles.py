@@ -65,7 +65,10 @@ class SplunkRole(object):
 
     def _syncLocalAppToRemote(self, ssh, remoteappdir, srvconfig):
         # use rsync
-        rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", self._appdir + "/", ssh.host + ":" + remoteappdir + "/"])
+        if ssh.host == "localhost":
+            rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-az", self._appdir + "/", remoteappdir + "/"])
+        else:
+            rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", self._appdir + "/", ssh.host + ":" + remoteappdir + "/"])
         if rc == 0:
             self.app.logger.debug("Syncing the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             return True
@@ -199,19 +202,26 @@ def splitUrlCreds(url):
         url += "?" + target.params
     return [ url, target.username, target.password ]
 
+
+roles = {}
+roles["SHD"] = SearchHeadRole()
+roles["SearchHeadRole"] = roles["SHD"]
+roles["SearchHead"] = roles["SHD"]
+roles["IDX"] = IndexerRole()
+roles["IndexerRole"] = roles["IDX"]
+roles["Indexer"] = roles["IDX"]
+roles["UFM"] = UnifiedForwarderManagementRole()
+roles["UnifiedForwarderManagementRole"] = roles["UFM"]
+roles["UnifiedForwarderManagement"] = roles["UFM"]
+
+def registerSplunkRole(key, role):
+    if key in roles:
+        raise KeyError("Cannot add a role to an existing key")
+    if not isinstance(role, SplunkRole):
+        raise TypeError("The specified role is not a SplunkRole")
+    roles[key] = role
+
 def getSplunkRoles():
-    roles = {}
+    return roles
 
-    roles["SHD"] = SearchHeadRole()
-    roles["SearchHeadRole"] = roles["SHD"]
-    roles["SearchHead"] = roles["SHD"]
 
-    roles["IDX"] = IndexerRole()
-    roles["IndexerRole"] = roles["IDX"]
-    roles["Indexer"] = roles["IDX"]
-
-    roles["UFM"] = UnifiedForwarderManagementRole()
-    roles["UnifiedForwarderManagementRole"] = roles["UFM"]
-    roles["UnifiedForwarderManagement"] = roles["UFM"]
-
-    return roles    
