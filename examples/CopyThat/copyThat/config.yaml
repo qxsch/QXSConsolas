@@ -119,13 +119,15 @@ logging:
 
   formatters:
     splunkFormatter:
-      class: !!python/name:logging.Formatter
+      #class: !!python/name:logging.Formatter
+      '()': QXSConsolas.SimpleFormatter
       format: '%(asctime)s app=%(name)s severity=%(levelname)s message=%(message)s'
       datefmt: '%Y-%m-%d %H:%M:%S'
     simpleFormatter:
-      class: !!python/name:logging.Formatter
+      '()': QXSConsolas.SimpleFormatter
       format: '[%(name)-15s][%(asctime)s][%(levelname)-8s] %(message)s'
       datefmt: '%Y-%m-%d %H:%M:%S'
+      exceptionfmt: "Traceback (most recent call last):\n%(traceback)s\n%(classname)s: %(message)s"
     consoleFormatter:
       '()': QXSConsolas.ColoredFormatter
       format: '[$color_level%(levelname)-8s$color_reset] $color_level%(message)s$color_reset'

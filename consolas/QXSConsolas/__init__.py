@@ -3,7 +3,7 @@
 import logging, logging.config
 import sys, os, importlib
 from QXSConsolas.Configuration import SysConf, Configuration
-from QXSConsolas.ColoredFormatter import ColoredFormatter
+from QXSConsolas.Formatter import SimpleFormatter, ColoredFormatter
 from QXSConsolas.Cli import Application
 
 from clint.textui import puts, colored, indent

@@ -29,11 +29,41 @@ LOG_LEVEL_COLORS = {
 }
 
  
+class SimpleFormatter(logging.Formatter):
+    datefmt = "%Y-%m-%d %H:%M:%S"
+    _fmt = None
+    _exceptionfmt = None
+    formatStackTrace = True
+    def __init__(self, fmt=None, datefmt="%Y-%m-%d %H:%M:%S", exceptionfmt="Traceback (most recent call last):\n%(traceback)s\n%(classname)s: %(message)s"):
+        # set standard Formatter values
+        self.datefmt = datefmt
+        self._fmt = fmt
+        self._exceptionfmt = exceptionfmt
+
+    def formatException(self, exc_info):
+        return ""
+    def _formatException(self, exc_info):
+        return self._exceptionfmt % { 
+            "classname": exc_info[0].__module__ + "." + exc_info[0].__name__,
+            "message": exc_info[1],
+            "traceback": "".join(format_tb(exc_info[2])).rstrip()
+        }
+
+    def format(self, record):
+        if not(record.exc_info is None) and self.formatStackTrace:
+            return super(SimpleFormatter, self).format(record).rstrip() + "\n" + self._formatException(record.exc_info).rstrip()
+            #return self._formatException(record.exc_info).rstrip() + "\n" + super(SimpleFormatter, self).format(record)
+        else:
+            return super(SimpleFormatter, self).format(record)
+
+
 class ColoredFormatter(logging.Formatter):
     datefmt = "%Y-%m-%d %H:%M:%S"
     _fmt = None
     _exceptionfmt = None
     useColors = True
+    formatStackTrace = False
+
     def __init__(self, fmt=None, datefmt="%Y-%m-%d %H:%M:%S", exceptionfmt="Traceback (most recent call last):\n%(traceback)s\n%(classname)s: %(message)s"):
         # set standard Formatter values
         self.datefmt = datefmt
@@ -53,6 +83,8 @@ class ColoredFormatter(logging.Formatter):
             self._exceptionfmt = re.sub("\033\[(\d+|;)+m", "", self._exceptionfmt)
 
     def formatException(self, exc_info):
+        return ""
+    def _formatException(self, exc_info):
         return self._exceptionfmt % { 
             "classname": exc_info[0].__module__ + "." + exc_info[0].__name__,
             "message": exc_info[1],
@@ -66,8 +98,13 @@ class ColoredFormatter(logging.Formatter):
                 self._fmt = Template(fmt).safe_substitute({ "color_level":  LOG_LEVEL_COLORS[record.levelname.upper()] })
             else:
                 self._fmt = Template(fmt).safe_substitute({ "color_level":  "" })
-            return super(ColoredFormatter, self).format(record)
+            if not(record.exc_info is None) and self.formatStackTrace:
+                return super(ColoredFormatter, self).format(record).rstrip() + "\n" + self._formatException(record.exc_info).rstrip()
+                #return self._formatException(record.exc_info).rstrip() + "\n" + super(ColoredFormatter, self).format(record)
+            else:
+                return super(ColoredFormatter, self).format(record)
         finally:
             self._fmt = fmt
+
 
 

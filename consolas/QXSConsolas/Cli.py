@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os, sys, inspect, re, logging
+from QXSConsolas.Formatter import ColoredFormatter
 from QXSConsolas.Configuration import Configuration, SysConf
 from clint.textui import puts, colored, indent
 from functools import wraps
@@ -345,11 +346,17 @@ class Application:
         puts(self.formatArgumentDefinitionBlock("-v", { "description": "Enable debug to console output (Be verbose)", "default": None, "required": False, "multiple": False, "referencedBy": [], "valuename": "VALUE" }))
         puts(self.formatArgumentDefinitionBlock("-q", { "description": "Disable all console output (Be quiet)", "default": None, "required": False, "multiple": False, "referencedBy": [], "valuename": "VALUE" }))
 
-    def _configureConsoleLoggers(self, level):
+    def _configureConsoleLoggers(self, level, formatStackTrace):
         for h in self.logger.handlers:
+            #print(h._name)
+            #print(h.formatter)
+            #print(h.__dict__)
             if type(h) == logging.StreamHandler:
                 if h.stream == sys.stdout:
                     h.setLevel(level)
+                    if isinstance(h.formatter, ColoredFormatter):
+                        h.formatter.formatStackTrace = formatStackTrace
+ 
 
     def run(self, argv = None, data = None, logger = None):
         """
@@ -364,17 +371,14 @@ class Application:
 
         self.options, self.arguments = self._argparser.parseArguments(argv)
         if self._argparser.loglevel == 1:
-            self._configureConsoleLoggers(logging.NOTSET)
+            self._configureConsoleLoggers(logging.NOTSET, True)
         elif self._argparser.loglevel == -1:
-            self._configureConsoleLoggers(logging.CRITICAL)
+            self._configureConsoleLoggers(logging.CRITICAL, False)
         try:
             self._argparser.validateRequiredArguments()
             return self._app(ApplicationData(self))
         except Exception as e:
-            if self._argparser.loglevel == 1:
-                self.logger.exception(e)
-            else:
-		self.logger.error(e)
+            logger.exception(e)
             return 1
 
 
