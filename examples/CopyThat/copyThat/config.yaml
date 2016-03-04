@@ -15,14 +15,14 @@ Splunk:
             hostname: "localhost"
             path: "/opt/shd-apps"
             target: "https://test:test@localhost:8089/"
-        prelocal:
-          - [ "echo", "hi shd pre", "$trigger", "$appdir" ]
-        preremote:
-          - [ "echo", "hi shd pre", "$trigger", "$appdir" ]
-        postlocal:
-          - [ "echo", "hi shd post", "$trigger", "$appdir" ]
-        postremote:
-          - [ "echo", "hi shd post", "$trigger", "$appdir" ]
+        #prelocal:
+        #  - [ "echo", "hi shd pre", "$trigger", "$appdir" ]
+        #preremote:
+        #  - [ "echo", "hi shd pre", "$trigger", "$appdir" ]
+        #postlocal:
+        #  - [ "echo", "hi shd post", "$trigger", "$appdir" ]
+        #postremote:
+        #  - [ "echo", "hi shd post", "$trigger", "$appdir" ]
       indexers:
         role: IDX
         servers:
@@ -30,14 +30,6 @@ Splunk:
             hostname: "localhost"
             path: "/opt/idx-apps"
             target: "https://test:test@localhost:8089/"
-        prelocal:
-          - [ "echo", "hi idx pre", "$trigger", "$appdir" ]
-        preremote:
-          - [ "echo", "hi idx pre", "$trigger", "$appdir" ]
-        postlocal:
-          - [ "echo", "hi idx post", "$trigger", "$appdir" ]
-        postremote:
-          - [ "echo", "hi idx post", "$trigger", "$appdir" ]
       deployments:
         role: UFM
         servers:
@@ -45,14 +37,6 @@ Splunk:
             hostname: "localhost"
             path: "/opt/dpl-apps"
             target: "https://test:test@localhost:8089/"
-        prelocal:
-          - [ "echo", "hi dpl pre", "$trigger", "$appdir" ]
-        preremote:
-          - [ "echo", "hi dpl pre", "$trigger", "$appdir" ]
-        postlocal:
-          - [ "echo", "hi dpl post", "$trigger", "$appdir" ]
-        postremote:
-          - [ "echo", "hi dpl post", "$trigger", "$appdir" ]
   apps:
     default:
       directory: /opt/apps/
