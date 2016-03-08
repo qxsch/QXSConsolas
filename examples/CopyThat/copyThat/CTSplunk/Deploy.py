@@ -5,7 +5,7 @@ from QXSConsolas.Configuration import Configuration
 from QXSConsolas.Cli import CliApp
 from QXSConsolas.Command import SSH, call, replaceVars
 from clint.textui import puts, colored, indent
-from SplunkRoles import getSplunkRoles
+from DeployRoles import getSplunkRoles
 import timeit
 
 

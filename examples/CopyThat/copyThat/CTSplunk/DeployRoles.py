@@ -7,7 +7,7 @@ import timeit
 import abc
 from urlparse import urlparse
 #from CTSplunk.Splunk import DeploymentException
-import CTSplunk.Splunk
+import CTSplunk.Deploy
 
 class SplunkRole(object):
     __metaclass__ = abc.ABCMeta
@@ -97,7 +97,7 @@ class SearchHeadRole(SplunkRole):
                      server configuration with hostname and path
 	"""
         if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
-            raise CTSplunk.Splunk.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
+            raise CTSplunk.Deploy.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         self._removeFileFromApp(ssh, remoteappdir, "indexes.conf")
         # runnign the shd deployment
         url, user, password = splitUrlCreds(srvconfig)
@@ -128,7 +128,7 @@ class IndexerRole(SplunkRole):
                      server configuration with hostname and path
 	"""
         if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
-            raise CTSplunk.Splunk.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
+            raise CTSplunk.Deploy.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         # runnign the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
         cmd = [ "splunk", "apply", "cluster-bundle", "--answer-yes" ]
@@ -157,7 +157,7 @@ class UnifiedForwarderManagementRole(SplunkRole):
                      server configuration with hostname and path
 	"""
         if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
-            raise CTSplunk.Splunk.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
+            raise CTSplunk.Deploy.DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         self._removeFileFromApp(ssh, remoteappdir, "indexes.conf")
         # runnign the idx deployment
         url, user, password = splitUrlCreds(srvconfig)

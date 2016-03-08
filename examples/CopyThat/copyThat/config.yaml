@@ -57,7 +57,7 @@ routes:
     footer: Powered by QXS Consolas
   cliapps:
     DeployApp:
-      func: CTSplunk.Splunk.DeployApp
+      func: CTSplunk.Deploy.DeployApp
       description: Deploy an app to splunk
       showCliName: False
       showCliDescription: False
