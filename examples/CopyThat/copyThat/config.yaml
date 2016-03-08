@@ -57,13 +57,13 @@ routes:
     footer: Powered by QXS Consolas
   cliapps:
     DeployApp:
-      func: CopyThat.Splunk.DeployApp
+      func: CTSplunk.Splunk.DeployApp
       description: Deploy an app to splunk
       showCliName: False
       showCliDescription: False
       logger: deploy.app
     Test:
-      func: CopyThat.Test.Test
+      func: CTSplunk.Test.Test
       description: My little test
       #showCliName: True
       #showCliDescription: True
