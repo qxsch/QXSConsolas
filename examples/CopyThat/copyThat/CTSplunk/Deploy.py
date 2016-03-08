@@ -7,14 +7,8 @@ from QXSConsolas.Command import SSH, call, replaceVars
 from clint.textui import puts, colored, indent
 from DeployRoles import getSplunkRoles
 import timeit
+from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException
 
-
-class NoRolesToDeployException(Exception):
-    pass
-class DeploymentException(Exception):
-    pass
-class AppNotFoundException(Exception):
-    pass
 
 class SplunkDeployer:
     app = None
