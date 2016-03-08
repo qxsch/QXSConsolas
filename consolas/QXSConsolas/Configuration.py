@@ -87,6 +87,13 @@ def GetSystemConfiguration():
 
 GetSystemConfiguration._systemConfig=None
 
+def InitSystemConfiguration(filename):
+    if GetSystemConfiguration._systemConfig is None:
+        GetSystemConfiguration._systemConfig = Configuration(filename)
+        return True
+    else:
+        return False
+    
 
 def SysConf():
     return GetSystemConfiguration()

@@ -12,10 +12,11 @@ import QXSConsolas
 
 
 try:
-    sys.exit(
-        QXSConsolas.run()
-    )
+    rc = QXSConsolas.run()
+    logging.shutdown()
+    sys.exit(rc)
 except Exception as e:
     logging.exception(e)
-
+    logging.shutdown()
+    sys.exit(10)
 
