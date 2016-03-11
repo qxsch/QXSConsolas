@@ -52,8 +52,11 @@ routes:
        \______  /\____/|   __// ____|  |____|   |___|  (____  /__|  
               \/       |__|   \/                     \/     \/      
     description: |
-      This is an advanced git deployment tool.
-      It does so many wonderful things. Wow. Amazing.
+      CopyThat deploys to the following Splunk roles:
+        * Search-Head Clusters
+        * Indexer Clusters
+        * Universal Forwarder Managment Servers.
+      You can configure the whole logging framework as well as pre- and post-deployment scripts.
     footer: Powered by QXS Consolas
   cliapps:
     DeployApp:
