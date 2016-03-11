@@ -131,9 +131,10 @@ class IndexerRole(SplunkRole):
         # runnign the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
         cmd = [ "splunk", "apply", "cluster-bundle", "--answer-yes" ]
-        if not (url is None or url == ""):
-            cmd.append("-target")
-            cmd.append(url)
+        # andy says: do not set a target
+        #if not (url is None or url == ""):
+        #    cmd.append("-target")
+        #    cmd.append(url)
         if not (user is None or user == "" or password is None or password == ""):
             cmd.append("-auth")
             cmd.append(user + ":" + password)
@@ -161,9 +162,10 @@ class UnifiedForwarderManagementRole(SplunkRole):
         # runnign the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
         cmd = [ "splunk", "reload", "deploy-server", "--answer-yes" ]
-        if not (url is None or url == ""):
-            cmd.append("-target")
-            cmd.append(url)
+        # andy says: do not set a target
+        #if not (url is None or url == ""):
+        #    cmd.append("-target")
+        #    cmd.append(url)
         if not (user is None or user == "" or password is None or password == ""):
             cmd.append("-auth")
             cmd.append(user + ":" + password)
@@ -181,6 +183,12 @@ def splitUrlCreds(url):
         target = urlparse(url["target"])
     elif "url" in url:
         target = urlparse(url["url"])
+    elif "credentials" in url:
+        a = url["credentials"].split(":")
+        if len(a) >= 2:
+            return [ None, a[0], ":".join(a[1:]) ]
+        else:
+            return [ None, None, None ]
     else:
         return [ None, None, None ]
     url = ""
@@ -199,6 +207,13 @@ def splitUrlCreds(url):
     url += target.path
     if target.params != "":
         url += "?" + target.params
+    if (type(url) != str) and ( target.username == "" or target.username is None or target.password == "" or target.password is None ):
+        if "credentials" in url:
+            a = url["credentials"].split(":")
+            if len(a) >= 2:
+                return [ url, a[0], ":".join(a[1:]) ]
+            else:
+                return [ url, target.username, target.password ]
     return [ url, target.username, target.password ]
 
 
