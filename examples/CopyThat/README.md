@@ -1,5 +1,5 @@
 # CopyThat
-Manages Splunk Search-Head Clusters, Indexer Clusters and Universal Forwarder Managment Servers with a simple YAML Based configuration and powerful logging (=python's logging framework).
+Manages Splunk Search-Head Clusters, Indexer Clusters and Universal Forwarder Managment Servers with a simple YAML configuration and powerful logging (=python's logging framework).
 
 Help of DeployApp command:
 ![CopyThat DeployApp Help](copyThat.png)
