@@ -5,7 +5,25 @@
 #myapp:
 #  foo: bar
 #  bar: [1, 2]
-Splunk:
+SplunkNodes:
+  envs:
+    PROD:
+      searchheads:
+        role: SHD
+        servers: [ "localhost" ]
+      indexers:
+        role: IDX
+        servers: [ "localhost" ]
+      indexermaster:
+        role: IDXM
+        servers: [ "localhost" ]
+      shdeployer:
+        role: SHDD
+        servers: [ "localhost" ]
+      deployments:
+        role: UFM
+        servers: [ "localhost" ]
+SplunkDeployment:
   envs:
     PROD:
       searchheads:

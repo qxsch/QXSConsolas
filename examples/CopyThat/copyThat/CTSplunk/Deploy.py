@@ -23,7 +23,7 @@ class SplunkDeployer:
 
     def _getAppDirConfig(self, appname):
         try:
-            appconfig = self.app.configuration.get("Splunk.apps")[appname]
+            appconfig = self.app.configuration.get("SplunkDeployment.apps")[appname]
             appdir = appconfig.get("directory")
             if not os.path.isdir(appdir):
                 raise AppNotFoundException("The app \"" + appname  + "\" does not exist in \"" + appdir + "\".")
@@ -32,7 +32,7 @@ class SplunkDeployer:
             raise e
         except:
             pass
-        appconfig = self.app.configuration.get("Splunk.apps.default")
+        appconfig = self.app.configuration.get("SplunkDeployment.apps.default")
         appdir = os.path.join(
             appconfig.get("directory"),
             appname
@@ -60,14 +60,14 @@ class SplunkDeployer:
         s = SSH()
         # configuration check
         for role in envconfig:
-            assert "role" in envconfig[role], "The key \"Splunk.envs.'" + envname + "'.'" + role + "'.role\" is missing"
-            assert envconfig[role]["role"] in self._roles, "The key \"Splunk.envs.'" + envname + "'.'" + role + "'.role\" is not properly configured. Found \"" + envconfig[role]["role"] + "\", but expecting one of: " + ", ".join(self._roles.keys())
+            assert "role" in envconfig[role], "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.role\" is missing"
+            assert envconfig[role]["role"] in self._roles, "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.role\" is not properly configured. Found \"" + envconfig[role]["role"] + "\", but expecting one of: " + ", ".join(self._roles.keys())
             for server in envconfig[role]["servers"]:
                 srv = envconfig[role]["servers"][server]
                 assert isinstance(srv, Configuration), "The role \"" + role + "\" in environment \"" + envname + "\" is not properly configured."
                 for key in ["hostname", "path"]:
-                    assert key in srv, "The key \"Splunk.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is missing"
-                    assert type(srv[key]) == str and srv[key] != "", "The key \"Splunk.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is not properly configured"
+                    assert key in srv, "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is missing"
+                    assert type(srv[key]) == str and srv[key] != "", "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is not properly configured"
         # check where to deploy && run optional pre local
         deployToRoles = []
         for role in envconfig:
@@ -150,7 +150,7 @@ class SplunkDeployer:
         # 1. git folder? -> git pull
         self._handleGitDir(appname, appdir, appconfig)
         # 2. deploy to envs
-        envs = self.app.configuration.get("Splunk.envs")
+        envs = self.app.configuration.get("SplunkDeployment.envs")
         if self.app.options["--env:"] == "ALL":
             for env in envs:
                 self._deployAppToEnv(appname, appdir, appconfig, env, envs[env])
