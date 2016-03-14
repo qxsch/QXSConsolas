@@ -50,13 +50,35 @@ class SplunkRole(object):
         self._roleconfig = roleconfig
 
     @abc.abstractmethod
+    def doBeforeDeployment(self, ssh, srvconfig):
+	"""
+        run code before apps will be deployed
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection to the host
+        srvconfig    QXSConsolas.Configuration.Configuration
+                     server configuration with hostname and path
+	"""
+        pass
+
+    @abc.abstractmethod
     def deployAppToServer(self, ssh, remoteappdir, srvconfig):
 	"""
-        deploys the app to the server
+        deploys an app to the server
         ssh          QXSConsolas.Command.SSH
                      the ssh connection to the host
         remoteappdir string
                      the remote directory name of the application
+        srvconfig    QXSConsolas.Configuration.Configuration
+                     server configuration with hostname and path
+	"""
+        pass
+
+    @abc.abstractmethod
+    def doAfterDeployment(self, ssh, srvconfig):
+	"""
+        run code after apps were deployed
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection to the host
         srvconfig    QXSConsolas.Configuration.Configuration
                      server configuration with hostname and path
 	"""
@@ -85,6 +107,8 @@ class SplunkRole(object):
 
 
 class SearchHeadRole(SplunkRole):
+    def doBeforeDeployment(self, ssh, srvconfig):
+        pass
     def deployAppToServer(self, ssh, remoteappdir, srvconfig):
 	"""
         deploys the app to the server
@@ -113,9 +137,13 @@ class SearchHeadRole(SplunkRole):
         else:
             self.app.logger.error("Failed to apply the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         #rc, stdout, stderr = ssh.call(cmd)
+    def doAfterDeployment(self, ssh, srvconfig):
+        pass
 
 
 class IndexerRole(SplunkRole):
+    def doBeforeDeployment(self, ssh, srvconfig):
+        pass
     def deployAppToServer(self, ssh, remoteappdir, srvconfig):
 	"""
         deploys the app to the server
@@ -143,9 +171,13 @@ class IndexerRole(SplunkRole):
             self.app.logger.debug("Appling the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
             self.app.logger.error("Failed to apply the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+    def doAfterDeployment(self, ssh, srvconfig):
+        pass
 
 
 class UnifiedForwarderManagementRole(SplunkRole):
+    def doBeforeDeployment(self, ssh, srvconfig):
+        pass
     def deployAppToServer(self, ssh, remoteappdir, srvconfig):
 	"""
         deploys the app to the server
@@ -174,6 +206,8 @@ class UnifiedForwarderManagementRole(SplunkRole):
             self.app.logger.debug("Reloading the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
             self.app.logger.error("Failed to reload the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+    def doAfterDeployment(self, ssh, srvconfig):
+        pass
 
 
 def splitUrlCreds(url):
