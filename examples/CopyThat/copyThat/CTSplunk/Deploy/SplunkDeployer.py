@@ -99,13 +99,13 @@ class SplunkDeployer:
         # deploy app to servers 
         for role in deployToRoles:
             self.app.logger.info("Deploying to environment \"" + envname + "\" role \"" + role + "\" (" + envconfig[role]["role"] + ")")
-            self._roles[envconfig[role]["role"]].setRoleInfo(self.app, appname, appdir, appconfig, envname, envconfig, role, envconfig[role])
+            self._roles[envconfig[role]["role"]].setRoleInfo(self.app, envname, envconfig, role, envconfig[role])
             for server in envconfig[role]["servers"]:
                 srv = envconfig[role]["servers"][server]
                 s.host = srv["hostname"]
                 remoteappdir = os.path.join(srv["path"], appname)
                 self.app.logger.debug("Deploying app to server: " + srv["hostname"] + ":" + srv["path"])
-                self._roles[envconfig[role]["role"]].deployAppToServer(s, remoteappdir, srv)
+                self._roles[envconfig[role]["role"]].deployAppToServer(s, appname, appdir, appconfig, remoteappdir, srv)
         # run optional post local && post remote commands
         for role in deployToRoles:
             self._runRoleCommand(envconfig[role], "postlocal", None, appdir)

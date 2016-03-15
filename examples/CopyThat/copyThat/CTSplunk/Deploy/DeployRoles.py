@@ -12,25 +12,16 @@ class SplunkRole(object):
     __metaclass__ = abc.ABCMeta
 
     app = None
-    _appname = None
-    _appdir = None
-    _appconfig = None
     _envname = None
     _envconfig = None
     _rolename = None
     _roleconfig = None
 
-    def setRoleInfo(self, cliapp, appname, appdir, appconfig, envname, envconfig, rolename, roleconfig):
+    def setRoleInfo(self, cliapp, envname, envconfig, rolename, roleconfig):
 	"""
         deploys the app to the server
         cliapp    QXSConsolas.Cli.ApplicationData
                   cli application data
-        appname   string
-                  name of the app, that should be deployed
-        appdir    string
-                  local dir of the app, that should be deployed
-        appconfig QXSConsolas.Configuration.Configuration
-                  configuration of the app, that should be deployed
         envname   string
                   name of the environment, where the app should be deployed
         envconfig QXSConsolas.Configuration.Configuration
@@ -41,9 +32,6 @@ class SplunkRole(object):
                    configuration of the role, where the app shoukd be deplyed
 	"""
         self.app = cliapp
-        self._appname = appname
-        self._appdir = appdir
-        self._appconfig = appconfig
         self._envname = envname
         self._envconfig = envconfig
         self._rolename = rolename
@@ -61,11 +49,17 @@ class SplunkRole(object):
         pass
 
     @abc.abstractmethod
-    def deployAppToServer(self, ssh, remoteappdir, srvconfig):
+    def deployAppToServer(self, ssh, appname, appdir, appconfig, remoteappdir, srvconfig):
 	"""
         deploys an app to the server
         ssh          QXSConsolas.Command.SSH
                      the ssh connection to the host
+        appname      string
+                     name of the app, that should be deployed
+        appdir       string
+                     local dir of the app, that should be deployed
+        appconfig    QXSConsolas.Configuration.Configuration
+                     configuration of the app, that should be deployed
         remoteappdir string
                      the remote directory name of the application
         srvconfig    QXSConsolas.Configuration.Configuration
@@ -84,12 +78,12 @@ class SplunkRole(object):
 	"""
         pass
 
-    def _syncLocalAppToRemote(self, ssh, remoteappdir, srvconfig):
+    def _syncLocalAppToRemote(self, ssh, appdir, remoteappdir, srvconfig):
         # use rsync
         if ssh.host == "localhost":
-            rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-az", self._appdir + "/", remoteappdir + "/"])
+            rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-az", appdir + "/", remoteappdir + "/"])
         else:
-            rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", self._appdir + "/", ssh.host + ":" + remoteappdir + "/"])
+            rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", appdir + "/", ssh.host + ":" + remoteappdir + "/"])
         if rc == 0:
             self.app.logger.debug("Syncing the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             return True
@@ -109,17 +103,23 @@ class SplunkRole(object):
 class SearchHeadRole(SplunkRole):
     def doBeforeDeployment(self, ssh, srvconfig):
         pass
-    def deployAppToServer(self, ssh, remoteappdir, srvconfig):
+    def deployAppToServer(self, ssh, appname, appdir, appconfig, remoteappdir, srvconfig):
 	"""
         deploys the app to the server
         ssh          QXSConsolas.Command.SSH
                      the ssh connection to the host
+        appname      string
+                     name of the app, that should be deployed
+        appdir       string
+                     local dir of the app, that should be deployed
+        appconfig    QXSConsolas.Configuration.Configuration
+                     configuration of the app, that should be deployed
         remoteappdir string
                      the remote directory name of the application
         srvconfig    QXSConsolas.Configuration.Configuration
                      server configuration with hostname and path
 	"""
-        if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
+        if not self._syncLocalAppToRemote(ssh, appdir, remoteappdir, srvconfig):
             raise DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         self._removeFileFromApp(ssh, remoteappdir, "indexes.conf")
         # runnign the shd deployment
@@ -144,17 +144,23 @@ class SearchHeadRole(SplunkRole):
 class IndexerRole(SplunkRole):
     def doBeforeDeployment(self, ssh, srvconfig):
         pass
-    def deployAppToServer(self, ssh, remoteappdir, srvconfig):
+    def deployAppToServer(self, ssh, appname, appdir, appconfig, remoteappdir, srvconfig):
 	"""
         deploys the app to the server
         ssh          QXSConsolas.Command.SSH
                      the ssh connection to the host
+        appname      string
+                     name of the app, that should be deployed
+        appdir       string
+                     local dir of the app, that should be deployed
+        appconfig    QXSConsolas.Configuration.Configuration
+                     configuration of the app, that should be deployed
         remoteappdir string
                      the remote directory name of the application
         srvconfig    QXSConsolas.Configuration.Configuration
                      server configuration with hostname and path
 	"""
-        if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
+        if not self._syncLocalAppToRemote(ssh, appdir, remoteappdir, srvconfig):
             raise DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         # runnign the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
@@ -178,17 +184,23 @@ class IndexerRole(SplunkRole):
 class UnifiedForwarderManagementRole(SplunkRole):
     def doBeforeDeployment(self, ssh, srvconfig):
         pass
-    def deployAppToServer(self, ssh, remoteappdir, srvconfig):
+    def deployAppToServer(self, ssh, appname, appdir, appconfig, remoteappdir, srvconfig):
 	"""
         deploys the app to the server
         ssh          QXSConsolas.Command.SSH
                      the ssh connection to the host
+        appname      string
+                     name of the app, that should be deployed
+        appdir       string
+                     local dir of the app, that should be deployed
+        appconfig    QXSConsolas.Configuration.Configuration
+                     configuration of the app, that should be deployed
         remoteappdir string
                      the remote directory name of the application
         srvconfig    QXSConsolas.Configuration.Configuration
                      server configuration with hostname and path
 	"""
-        if not self._syncLocalAppToRemote(ssh, remoteappdir, srvconfig):
+        if not self._syncLocalAppToRemote(ssh, appdir, remoteappdir, srvconfig):
             raise DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         self._removeFileFromApp(ssh, remoteappdir, "indexes.conf")
         # runnign the idx deployment
