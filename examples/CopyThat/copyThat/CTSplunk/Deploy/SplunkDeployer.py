@@ -199,15 +199,17 @@ class SplunkDeployer:
         ssh = SSH()
         if "ALL"  in self.app.options['--app:']:
             self.app.logger.warning("Deploying ALL splunk apps")
+            apps = self.app.configuration.get("SplunkDeployment.apps")
             defaultdir = self.app.configuration.get("SplunkDeployment.apps.default.directory")
             # default apps
             for d in [d for d in os.listdir(defaultdir) if os.path.isdir(os.path.join(defaultdir, d))]:
+                if d in apps:
+                    continue
                 try:
                     self._deployApp(ssh, d)
                 except Exception as e:
                     self.app.logger.exception(e)
             # other apps
-            apps = self.app.configuration.get("SplunkDeployment.apps")
             for d in apps:
                 if d == "default":
                     continue
