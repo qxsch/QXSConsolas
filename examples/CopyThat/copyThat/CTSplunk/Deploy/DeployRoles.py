@@ -40,7 +40,7 @@ class SplunkRole(object):
     @abc.abstractmethod
     def doBeforeDeployment(self, ssh, srvconfig):
 	"""
-        run code before apps will be deployed
+        run code before apps will be deployed  (will run once for every server in affected env.role)
         ssh          QXSConsolas.Command.SSH
                      the ssh connection to the host
         srvconfig    QXSConsolas.Configuration.Configuration
@@ -70,7 +70,7 @@ class SplunkRole(object):
     @abc.abstractmethod
     def doAfterDeployment(self, ssh, srvconfig):
 	"""
-        run code after apps were deployed
+        run code after apps were deployed (will run once for every server in affected env.role)
         ssh          QXSConsolas.Command.SSH
                      the ssh connection to the host
         srvconfig    QXSConsolas.Configuration.Configuration
@@ -122,7 +122,9 @@ class SearchHeadRole(SplunkRole):
         if not self._syncLocalAppToRemote(ssh, appdir, remoteappdir, srvconfig):
             raise DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         self._removeFileFromApp(ssh, remoteappdir, "indexes.conf")
-        # runnign the shd deployment
+
+    def doAfterDeployment(self, ssh, srvconfig):
+        # running the shd deployment
         url, user, password = splitUrlCreds(srvconfig)
         cmd = [ "splunk", "apply", "shcluster-bundle", "--answer-yes" ]
         if not (url is None or url == ""):
@@ -136,9 +138,6 @@ class SearchHeadRole(SplunkRole):
             self.app.logger.debug("Appling the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
             self.app.logger.error("Failed to apply the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
-        #rc, stdout, stderr = ssh.call(cmd)
-    def doAfterDeployment(self, ssh, srvconfig):
-        pass
 
 
 class IndexerRole(SplunkRole):
@@ -162,7 +161,9 @@ class IndexerRole(SplunkRole):
 	"""
         if not self._syncLocalAppToRemote(ssh, appdir, remoteappdir, srvconfig):
             raise DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
-        # runnign the idx deployment
+
+    def doAfterDeployment(self, ssh, srvconfig):
+        # running the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
         cmd = [ "splunk", "apply", "cluster-bundle", "--answer-yes" ]
         # andy says: do not set a target
@@ -177,8 +178,6 @@ class IndexerRole(SplunkRole):
             self.app.logger.debug("Appling the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
             self.app.logger.error("Failed to apply the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
-    def doAfterDeployment(self, ssh, srvconfig):
-        pass
 
 
 class UnifiedForwarderManagementRole(SplunkRole):
@@ -203,7 +202,9 @@ class UnifiedForwarderManagementRole(SplunkRole):
         if not self._syncLocalAppToRemote(ssh, appdir, remoteappdir, srvconfig):
             raise DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
         self._removeFileFromApp(ssh, remoteappdir, "indexes.conf")
-        # runnign the idx deployment
+
+    def doAfterDeployment(self, ssh, srvconfig):
+        # running the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
         cmd = [ "splunk", "reload", "deploy-server", "--answer-yes" ]
         # andy says: do not set a target
@@ -218,8 +219,6 @@ class UnifiedForwarderManagementRole(SplunkRole):
             self.app.logger.debug("Reloading the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
             self.app.logger.error("Failed to reload the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
-    def doAfterDeployment(self, ssh, srvconfig):
-        pass
 
 
 def splitUrlCreds(url):

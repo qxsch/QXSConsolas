@@ -12,6 +12,7 @@ from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundE
 
 class SplunkDeployer:
     app = None
+    _affectedServers = {}
     _roles = {
         "SHD": None,
         "IDX": None,
@@ -56,8 +57,7 @@ class SplunkDeployer:
 
         return None
     
-    def _deployAppToEnv(self, appname, appdir, appconfig, envname, envconfig):
-        s = SSH()
+    def _deployAppToEnv(self, ssh, appname, appdir, appconfig, envname, envconfig):
         # configuration check
         for role in envconfig:
             assert "role" in envconfig[role], "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.role\" is missing"
@@ -73,9 +73,9 @@ class SplunkDeployer:
         for role in envconfig:
             for server in envconfig[role]["servers"]:
                 srv = envconfig[role]["servers"][server]
-                s.host = srv["hostname"]
+                ssh.host = srv["hostname"]
                 remoteappdir = os.path.join(srv["path"], appname)
-                rc, stdout, stderr = s.call([ "test", "-d", os.path.join(srv["path"], appname) ])
+                rc, stdout, stderr = ssh.call([ "test", "-d", os.path.join(srv["path"], appname) ])
                 if rc != 0:
                     self.app.logger.debug("Won't deploy to role \"" + role + "\" in environment \"" + envname + "\", because the app does not exist on server \"" + srv["hostname"] + "\"")
                     continue
@@ -88,9 +88,9 @@ class SplunkDeployer:
             else:
                 for server in envconfig[role]["servers"]:
                     srv = envconfig[role]["servers"][server]
-                    s.host = srv["hostname"]
+                    ssh.host = srv["hostname"]
                     remoteappdir = os.path.join(srv["path"], appname)
-                    if not self._runRoleCommand(envconfig[role], "preremote", s, remoteappdir):
+                    if not self._runRoleCommand(envconfig[role], "preremote", ssh, remoteappdir):
                         self.app.logger.debug("Won't deploy to role \"" + role + "\" in environment \"" + envname + "\", because of a failed preremote command on server \"" + srv["hostname"] + "\"")
                         deployToRoles.remove(role)
                         break;
@@ -99,21 +99,22 @@ class SplunkDeployer:
         # deploy app to servers 
         for role in deployToRoles:
             self.app.logger.info("Deploying to environment \"" + envname + "\" role \"" + role + "\" (" + envconfig[role]["role"] + ")")
+            self._runBeforeDeployment(ssh, envname, role)
             self._roles[envconfig[role]["role"]].setRoleInfo(self.app, envname, envconfig, role, envconfig[role])
             for server in envconfig[role]["servers"]:
                 srv = envconfig[role]["servers"][server]
-                s.host = srv["hostname"]
+                ssh.host = srv["hostname"]
                 remoteappdir = os.path.join(srv["path"], appname)
                 self.app.logger.debug("Deploying app to server: " + srv["hostname"] + ":" + srv["path"])
-                self._roles[envconfig[role]["role"]].deployAppToServer(s, appname, appdir, appconfig, remoteappdir, srv)
+                self._roles[envconfig[role]["role"]].deployAppToServer(ssh, appname, appdir, appconfig, remoteappdir, srv)
         # run optional post local && post remote commands
         for role in deployToRoles:
             self._runRoleCommand(envconfig[role], "postlocal", None, appdir)
             for server in envconfig[role]["servers"]:
                 srv = envconfig[role]["servers"][server]
-                s.host = srv["hostname"]
+                ssh.host = srv["hostname"]
                 remoteappdir = os.path.join(srv["path"], appname)
-                self._runRoleCommand(envconfig[role], "postremote", s, remoteappdir)
+                self._runRoleCommand(envconfig[role], "postremote", ssh, remoteappdir)
 
     def _runRoleCommand(self, roleconfig, key, ssh, appdir):
         if not(key in roleconfig and isinstance(roleconfig[key], Configuration)):
@@ -143,7 +144,7 @@ class SplunkDeployer:
                         self.app.logger.debug(key.upper() + " Command " + str(cmd) + " was successful on host \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         return True
 
-    def _deployApp(self, appname):
+    def _deployApp(self, ssh, appname):
         self.app.logger.info("Deploying splunk app: " + appname)
         appdir, appconfig = self._getAppDirConfig(appname)
         self.app.logger.debug("App found in path: " + appdir)
@@ -153,15 +154,40 @@ class SplunkDeployer:
         envs = self.app.configuration.get("SplunkDeployment.envs")
         if self.app.options["--env:"] == "ALL":
             for env in envs:
-                self._deployAppToEnv(appname, appdir, appconfig, env, envs[env])
+                self._deployAppToEnv(ssh, appname, appdir, appconfig, env, envs[env])
         else:
             env = self.app.options["--env:"]
             if env in envs:
-                self._deployAppToEnv(appname, appdir, appconfig, env, envs[env])
+                self._deployAppToEnv(ssh, appname, appdir, appconfig, env, envs[env])
             else:
                 raise RuntimeError("The environment \"" + env + "\" does not exist.")
 
+    def _runBeforeDeployment(self, ssh, envname, rolename):
+        if not envname in self._affectedServers:
+            self._affectedServers[envname] = {}
+        if not rolename in self._affectedServers[envname]:
+            self._affectedServers[envname][rolename] = True
+            envs = self.app.configuration.get("SplunkDeployment.envs")
+            self._roles[envs[envname][rolename]["role"]].setRoleInfo(self.app, envname, envs[envname], rolename, envs[envname][rolename])
+            for server in envs[envname][rolename]["servers"]:
+                srv = envs[envname][rolename]["servers"][server]
+                ssh.host = srv["hostname"]
+                self.app.logger.debug("Running before deployment task on server: " + srv["hostname"])
+                self._roles[envs[envname][rolename]["role"]].doBeforeDeployment(ssh, srv)
+
+    def _runAfterDeployment(self, ssh):
+        envs = self.app.configuration.get("SplunkDeployment.envs")
+        for envname in self._affectedServers:
+            for rolename in self._affectedServers[envname]:
+                self._roles[envs[envname][rolename]["role"]].setRoleInfo(self.app, envname, envs[envname], rolename, envs[envname][rolename])
+                for server in envs[envname][rolename]["servers"]:
+                    srv = envs[envname][rolename]["servers"][server]
+                    ssh.host = srv["hostname"]
+                    self.app.logger.debug("Running after deployment task on server: " + srv["hostname"])
+                    self._roles[envs[envname][rolename]["role"]].doAfterDeployment(ssh, srv)
+
     def deploy(self, app):
+        self._affectedServers = {}
         self.app = app
         if not "--env:" in self.app.options:
             self.app.options["--env:"] = "ALL"
@@ -170,8 +196,10 @@ class SplunkDeployer:
 
         t = timeit.default_timer()
 
+        ssh = SSH()
         for appname in self.app.options['--app:']:
-            self._deployApp(appname)
+            self._deployApp(ssh, appname)
+        self._runAfterDeployment(ssh)
 
         t = timeit.default_timer() - t
         if t < 10:
