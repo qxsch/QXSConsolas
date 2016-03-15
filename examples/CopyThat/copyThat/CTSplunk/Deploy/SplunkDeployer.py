@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import logging, os
+import logging, os, os.path
 from QXSConsolas.Configuration import Configuration
 from QXSConsolas.Cli import CliApp
 from QXSConsolas.Command import SSH, call, replaceVars
@@ -197,8 +197,32 @@ class SplunkDeployer:
         t = timeit.default_timer()
 
         ssh = SSH()
-        for appname in self.app.options['--app:']:
-            self._deployApp(ssh, appname)
+        if "ALL"  in self.app.options['--app:']:
+            self.app.logger.warning("Deploying ALL splunk apps")
+            defaultdir = self.app.configuration.get("SplunkDeployment.apps.default.directory")
+            # default apps
+            for d in [d for d in os.listdir(defaultdir) if os.path.isdir(os.path.join(defaultdir, d))]:
+                try:
+                    self._deployApp(ssh, d)
+                except Exception as e:
+                    self.app.logger.exception(e)
+            # other apps
+            apps = self.app.configuration.get("SplunkDeployment.apps")
+            for d in apps:
+                if d == "default":
+                    continue
+                try:
+                    apps[d].get("directory")
+                except:
+                    continue
+                try:
+                    self._deployApp(ssh, d)
+                except Exception as e:
+                    self.app.logger.exception(e)
+        else:
+            for appname in self.app.options['--app:']:
+                self._deployApp(ssh, appname)
+
         self._runAfterDeployment(ssh)
 
         t = timeit.default_timer() - t
