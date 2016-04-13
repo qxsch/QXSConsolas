@@ -391,7 +391,7 @@ class ApplicationData:
     logger = None
     options = dict()
     arguments = list()
-    _currentUser = None
+    _realUser = None
 
     def __init__(
         self,
@@ -411,9 +411,9 @@ class ApplicationData:
         self.description = app.description
 
     def getRealUser(self):
-        if self._currentUser is None:
-            self._currentUser = UTMP.UTMP().getRealUser()
-        return self._currentUser
+        if self._realUser is None:
+            self._realUser = UTMP.UTMP().getRealUser()
+        return self._realUser
 
     def log(self, message, level="info"):
         if hasattr(self.logger, level):
