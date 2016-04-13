@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os, sys, inspect, re, logging
+import UTMP
 from QXSConsolas.Formatter import ColoredFormatter
 from QXSConsolas.Configuration import Configuration, SysConf
 from clint.textui import puts, colored, indent
@@ -390,6 +391,7 @@ class ApplicationData:
     logger = None
     options = dict()
     arguments = list()
+    _currentUser = None
 
     def __init__(
         self,
@@ -407,6 +409,11 @@ class ApplicationData:
         self.arguments = app.arguments
         self.name = app.name
         self.description = app.description
+
+    def getRealUser(self):
+        if self._currentUser is None:
+            self._currentUser = UTMP.UTMP().getRealUser()
+        return self._currentUser
 
     def log(self, message, level="info"):
         if hasattr(self.logger, level):

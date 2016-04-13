@@ -15,7 +15,8 @@ from QXSConsolas.Command import SSH, call
     ]
 )
 def Test(app):
-    print("Hallo Welt - Test")
+    
+    print("Hello " + app.getRealUser() + "  - (Real user even after sudo / su)")
     print("Options:")
     print(app.options)
     print("Arguments:")
