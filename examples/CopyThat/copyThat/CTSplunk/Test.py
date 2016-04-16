@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import logging
+import logging, os
 from QXSConsolas.Cli import CliApp
 from QXSConsolas.Command import SSH, call
 
@@ -16,7 +16,7 @@ from QXSConsolas.Command import SSH, call
 )
 def Test(app):
     
-    print("Hello " + app.getRealUser() + "  - (Real user even after sudo / su)")
+    print("Hello " + os.getlogin() + "  - (Real user even after sudo / su)")
     print("Options:")
     print(app.options)
     print("Arguments:")
