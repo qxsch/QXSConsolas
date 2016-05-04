@@ -7,7 +7,7 @@ from QXSConsolas.Command import SSH, call, replaceVars
 from clint.textui import puts, colored, indent
 from DeployRoles import getSplunkRoles
 import timeit
-from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException
+from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException, AppAlreadyExistsException
 
 
 class SplunkDeployer:
@@ -56,7 +56,44 @@ class SplunkDeployer:
             raise RuntimeError("Failed to run git pull with error: " + (stdout.strip() + "\n" + stderr.strip()).strip())
 
         return None
-    
+
+    def _createAppInEnv(self, ssh, appname, appdir, appconfig, envname, envconfig, createAppInRoles):
+        # check if all roles can be created
+        for role in createAppInRoles:
+            assert role in envconfig, "The role \"" + role + "\" does not exist"
+            assert "role" in envconfig[role], "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.role\" is missing"
+            assert envconfig[role]["role"] in self._roles, "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.role\" is not properly configured. Found \"" + envconfig[role]["role"] + "\", but expecting one of: " + ", ".join(self._roles.keys())
+            for server in envconfig[role]["servers"]:
+                srv = envconfig[role]["servers"][server]
+                assert isinstance(srv, Configuration), "The role \"" + role + "\" in environment \"" + envname + "\" is not properly configured."
+                for key in ["hostname", "path"]:
+                    assert key in srv, "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is missing"
+        # check for active roles
+        activeRoles = []
+        for role in envconfig:
+            for server in envconfig[role]["servers"]:
+                srv = envconfig[role]["servers"][server]
+                ssh.host = srv["hostname"]
+                remoteappdir = os.path.join(srv["path"], appname)
+                rc, stdout, stderr = ssh.call([ "test", "-d", os.path.join(srv["path"], appname) ])
+                if rc == 0:
+                    activeRoles.append(role)
+        # do we have active roles? 
+        if activeRoles:
+            raise AppAlreadyExistsException("Cannot deploy the app \"" + appname + "\" because it already exists in environment \"" + envname + "\" (Roles found: " + ", ".join(activeRoles)  + ")")
+        for role in createAppInRoles:
+            self.app.logger.info("Creating the app in environment \"" + envname + "\" role \"" + role + "\" (" + envconfig[role]["role"] + ")")
+            for server in envconfig[role]["servers"]:
+                srv = envconfig[role]["servers"][server]
+                ssh.host = srv["hostname"]
+                remoteappdir = os.path.join(srv["path"], appname)
+                rc, stdout, stderr = ssh.call([ "mkdir", os.path.join(srv["path"], appname) ])
+                if rc != 0:
+                    self.app.logger.warning("Cannot create the directory \"" + os.path.join(srv["path"], appname) + "\" on host \"" + srv["hostname"] + "\". Failed with rc " + rc + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                else:
+                    self.app.logger.debug("Succsessfully created the directory \"" + os.path.join(srv["path"], appname) + "\" on host \"" + srv["hostname"] + "\".")
+
+
     def _deployAppToEnv(self, ssh, appname, appdir, appconfig, envname, envconfig):
         # configuration check
         for role in envconfig:
@@ -145,7 +182,7 @@ class SplunkDeployer:
         return True
 
     def _deployApp(self, ssh, appname):
-        self.app.logger.info("Deploying splunk app: " + appname)
+        self.app.logger.info("Deploying the splunk app: " + appname)
         appdir, appconfig = self._getAppDirConfig(appname)
         self.app.logger.debug("App found in path: " + appdir)
         # 1. git folder? -> git pull
@@ -161,6 +198,27 @@ class SplunkDeployer:
                 self._deployAppToEnv(ssh, appname, appdir, appconfig, env, envs[env])
             else:
                 raise RuntimeError("The environment \"" + env + "\" does not exist.")
+
+    def _createApp(self, ssh, appname, createAppInRoles):
+        if not createAppInRoles:
+            raise RuntimeError("You did not specify an roles, where the app should be created.")
+        self.app.logger.info("Creating  the splunk app: " + appname)
+        appdir, appconfig = self._getAppDirConfig(appname)
+        self.app.logger.debug("App found in path: " + appdir)
+        # 1. git folder? -> git pull
+        self._handleGitDir(appname, appdir, appconfig)
+        # 2. deploy to envs
+        envs = self.app.configuration.get("SplunkDeployment.envs")
+        if self.app.options["--env:"] == "ALL":
+            for env in envs:
+                self._createAppInEnv(ssh, appname, appdir, appconfig, env, envs[env], createAppInRoles)
+        else:
+            env = self.app.options["--env:"]
+            if env in envs:
+                self._createAppInEnv(ssh, appname, appdir, appconfig, env, envs[env], createAppInRoles)
+            else:
+                raise RuntimeError("The environment \"" + env + "\" does not exist.")
+
 
     def _runBeforeDeployment(self, ssh, envname, rolename):
         if not envname in self._affectedServers:
@@ -232,5 +290,32 @@ class SplunkDeployer:
             self.app.logger.info("Deployment took: {:.4f} seconds".format(t))
         else:
             self.app.logger.warning("Deployment took: {:.4f} seconds".format(t))
+
+            
+    def create(self, app):
+        self._affectedServers = {}
+        self.app = app
+        if not "--env:" in self.app.options:
+            self.app.options["--env:"] = "ALL"
+        else:
+            self.app.options["--env:"] = self.app.options["--env:"].upper()
+
+        t = timeit.default_timer()
+
+        ssh = SSH()
+        if "ALL"  in self.app.options['--app:']:
+            raise AppNotFoundException("Cannot create an app called ALL, because it is a reserved word")
+        else:
+            for appname in self.app.options['--app:']:
+                self._createApp(ssh, appname, self.app.options['--role:'])
+                self._deployApp(ssh, appname)
+
+        self._runAfterDeployment(ssh)
+
+        t = timeit.default_timer() - t
+        if t < 10:
+            self.app.logger.info("Creation took: {:.4f} seconds".format(t))
+        else:
+            self.app.logger.warning("Creation took: {:.4f} seconds".format(t))
             
 

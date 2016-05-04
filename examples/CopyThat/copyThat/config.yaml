@@ -83,6 +83,12 @@ routes:
       showCliName: False
       showCliDescription: False
       logger: deploy.app
+    CreateApp:
+      func: CTSplunk.Deploy.CreateApp
+      description: Create an new app on splunk
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
     Test:
       func: CTSplunk.Test.Test
       description: My little test
