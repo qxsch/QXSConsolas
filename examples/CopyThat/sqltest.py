@@ -87,16 +87,21 @@ conn.execute(classes.insert().values({"class_namespace": "Apps",    "class_name"
 # Inserting ClassAttributes for Indexers
 result = conn.execute((classes.select().where(classes.c.class_namespace=="Indexes" and classes.c.class_name=="Indexes"))).fetchone()
 conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "IndexOwner", "attr_name": "Splunk Index Owner", "attr_type": "string"}))
-conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "DataSensitive", "attr_name": "Data Sensitive", "attr_type": "bool", "attr_default": "False"}))
 conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "TargetedUsers", "attr_name": "Targeted Users", "attr_type": "string"}))
 conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "TargetedGroups", "attr_name": "Targeted Groups", "attr_type": "string"}))
-conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "IndexedGBPerDay", "attr_name": "GB per Day", "attr_type": "float"}))
+conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "Description", "attr_name": "Description", "attr_type": "string"}))
+conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "DataSensitive", "attr_name": "Data Sensitive", "attr_type": "bool", "attr_default": "False"}))
+conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "DailyQuotaGB", "attr_name": "Daily Quota in GB", "attr_type": "float"}))
+conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "RetentionDays", "attr_name": "Retention in Days", "attr_type": "float"}))
+conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "QuotaAlertMails", "attr_name": "Quota Alert Mails", "attr_type": "string"}))
+conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "CostCenter", "attr_name": "Cost Center", "attr_type": "string"}))
 
 # Inserting ClassAttributes for Apps
 result = conn.execute((classes.select().where(classes.c.class_namespace=="Apps" and classes.c.class_name=="Apps"))).fetchone()
 conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "AppOwner", "attr_name": "Splunk App Owner", "attr_type": "string"}))
 conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "TargetedUsers", "attr_name": "Targeted Users", "attr_type": "string"}))
 conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "TargetedGroups", "attr_name": "Targeted Groups", "attr_type": "string"}))
+conn.execute(classattributes.insert().values({"class_id": result.class_id, "attr_key": "Description", "attr_name": "Description", "attr_type": "string"}))
 
 
 result = conn.execute(ex.select([classes.c.class_namespace, classes.c.class_name, classattributes]).select_from(ex.join(classattributes, classes, classattributes.c.class_id == classes.c.class_id)))
