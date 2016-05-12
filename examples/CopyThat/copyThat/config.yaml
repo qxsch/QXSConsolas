@@ -5,6 +5,8 @@
 #myapp:
 #  foo: bar
 #  bar: [1, 2]
+SplunkInventory:
+  datasource: 'sqlite:////tmp/db.sqlite'
 SplunkNodes:
   envs:
     PROD:

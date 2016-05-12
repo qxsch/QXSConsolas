@@ -1,10 +1,15 @@
 import logging, os
 from QXSConsolas.Cli import CliApp
-from clint.textui import puts, colored, indent
+from QXSConsolas.Configuration import GetSystemConfiguration
 from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException
-from IndexInventory import IndexInventory
-
+from Inventory import IndexInventory
 from sqlalchemy import create_engine
+
+
+def GetInventoryEngine():
+    return GetInventoryEngine._engine
+GetInventoryEngine._engine=create_engine(GetSystemConfiguration().get("SplunkInventory.datasource"))
+
 
 @CliApp(
     Name = "Add Index to Inventory",

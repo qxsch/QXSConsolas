@@ -8,14 +8,20 @@ sys.path.append(
         "copyThat"
     )
 )
+from QXSConsolas.Configuration import GetSystemConfiguration, InitSystemConfiguration
+InitSystemConfiguration(
+    os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "copyThat/config.yaml"
+    )
+)
 
-from sqlalchemy import create_engine
-from CTSplunk.Inventory.GenericInventory import GenericInventory, IndexInventory
-from clint.textui import puts, columns
+from CTSplunk.Inventory import GetInventoryEngine
+from CTSplunk.Inventory.Inventory import GenericInventory, IndexInventory
 from clint.textui import puts, columns, colored
 
 
-engine = create_engine('sqlite:////tmp/db.sqlite')
+engine = GetInventoryEngine()
 with engine.begin() as trans:
     ii = IndexInventory(trans)
     #print(ii.getAttributes())
