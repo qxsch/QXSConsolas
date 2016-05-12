@@ -11,6 +11,7 @@ from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundE
 
 
 class SplunkDeployer:
+    WarnDeploymentTime = 10
     app = None
     _affectedServers = {}
     _roles = {
@@ -320,7 +321,7 @@ class SplunkDeployer:
         self._runAfterDeployment(ssh)
 
         t = timeit.default_timer() - t
-        if t < 15:
+        if t < self.WarnDeploymentTime:
             self.app.logger.info("Deployment took: {:.4f} seconds".format(t))
         else:
             self.app.logger.warning("Deployment took: {:.4f} seconds".format(t))
@@ -344,7 +345,7 @@ class SplunkDeployer:
                 self._removeApp(ssh, appname)
 
         t = timeit.default_timer() - t
-        if t < 15:
+        if t < self.WarnDeploymentTime:
             self.app.logger.info("Removal took: {:.4f} seconds".format(t))
         else:
             self.app.logger.warning("Removal took: {:.4f} seconds".format(t))
@@ -371,7 +372,7 @@ class SplunkDeployer:
         self._runAfterDeployment(ssh)
 
         t = timeit.default_timer() - t
-        if t < 15:
+        if t < self.WarnDeploymentTime:
             self.app.logger.info("Creation took: {:.4f} seconds".format(t))
         else:
             self.app.logger.warning("Creation took: {:.4f} seconds".format(t))
