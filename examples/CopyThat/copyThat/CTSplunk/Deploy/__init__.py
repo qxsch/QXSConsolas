@@ -23,9 +23,23 @@ def DeployApp(app):
         { "argument": "--env:", "default": "ALL", "description": "The targeted Splunk environment", "valuename": "ENV" },
         { "argument": "--app:",  "required": True, "multiple": True,  "description": "The app that should be deployed", "valuename": "APP" },
         { "argument": "--role:", "required": True, "multiple": True,  "description": "Create the app on the following roles", "valuename": "ROLE" },
+        { "argument": "-f", "description": "Force the app creation." },
     ]
 )
 def CreateApp(app):
     s = SplunkDeployer()
     s.create(app)
+
+@CliApp(
+    Name = "Remove an app",
+    Description = "Removes an app from a splunk environment",
+    Opts = [ 
+        { "argument": "--env:", "default": "ALL", "description": "The targeted Splunk environment", "valuename": "ENV" },
+        { "argument": "--app:",  "required": True, "multiple": True,  "description": "The app that should be deployed", "valuename": "APP" },
+    ]
+)
+def RemoveApp(app):
+    s = SplunkDeployer()
+    s.remove(app)
+
 

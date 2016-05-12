@@ -57,7 +57,40 @@ class SplunkDeployer:
 
         return None
 
-    def _createAppInEnv(self, ssh, appname, appdir, appconfig, envname, envconfig, createAppInRoles):
+    def _getActiveRoles(self, ssh, appname, appdir, appconfig, envname, envconfig):
+        # check for active roles
+        activeRoles = []
+        for role in envconfig:
+            for server in envconfig[role]["servers"]:
+                srv = envconfig[role]["servers"][server]
+                ssh.host = srv["hostname"]
+                remoteappdir = os.path.join(srv["path"], appname)
+                rc, stdout, stderr = ssh.call([ "test", "-d", os.path.join(srv["path"], appname) ])
+                if rc == 0:
+                    activeRoles.append(role)
+        return activeRoles
+
+    def _removeAppFromEnv(self, ssh, appname, appdir, appconfig, envname, envconfig):
+        # check for active roles
+        activeRoles = self._getActiveRoles(ssh, appname, appdir, appconfig, envname, envconfig)
+        # do we have active roles?
+        if not activeRoles:
+            raise NoRolesToDeployException("Cannot remove the app \"" + appname + "\" from any roles for environment \"" + envname + "\"")
+        # remove the app from all aactive rolss
+        for role in activeRoles:
+            self.app.logger.info("Creating the app in environment \"" + envname + "\" role \"" + role + "\" (" + envconfig[role]["role"] + ")")
+            for server in envconfig[role]["servers"]:
+                srv = envconfig[role]["servers"][server]
+                ssh.host = srv["hostname"]
+                remoteappdir = os.path.join(srv["path"], appname)
+                rc, stdout, stderr = ssh.call([ "rm", "-rf", os.path.join(srv["path"], appname) ])
+                if rc != 0:
+                    self.app.logger.warning("Cannot remove the directory \"" + os.path.join(srv["path"], appname) + "\" on host \"" + srv["hostname"] + "\". Failed with rc " + str(rc) + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                else:
+                    self.app.logger.debug("Succsessfully removed the directory \"" + os.path.join(srv["path"], appname) + "\" on host \"" + srv["hostname"] + "\".")
+
+
+    def _createAppInEnv(self, ssh, appname, appdir, appconfig, envname, envconfig, createAppInRoles, force):
         # check if all roles can be created
         for role in createAppInRoles:
             assert role in envconfig, "The role \"" + role + "\" does not exist"
@@ -69,18 +102,14 @@ class SplunkDeployer:
                 for key in ["hostname", "path"]:
                     assert key in srv, "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is missing"
         # check for active roles
-        activeRoles = []
-        for role in envconfig:
-            for server in envconfig[role]["servers"]:
-                srv = envconfig[role]["servers"][server]
-                ssh.host = srv["hostname"]
-                remoteappdir = os.path.join(srv["path"], appname)
-                rc, stdout, stderr = ssh.call([ "test", "-d", os.path.join(srv["path"], appname) ])
-                if rc == 0:
-                    activeRoles.append(role)
-        # do we have active roles? 
+        activeRoles = self._getActiveRoles(ssh, appname, appdir, appconfig, envname, envconfig)
+        # do we have active roles?
         if activeRoles:
-            raise AppAlreadyExistsException("Cannot deploy the app \"" + appname + "\" because it already exists in environment \"" + envname + "\" (Roles found: " + ", ".join(activeRoles)  + ")")
+            if force:
+                self.app.logger.warning("The app \"" + appname + "\" already exists in environment \"" + envname + "\" (Roles found: " + ", ".join(activeRoles)  + ")")
+            else:
+                raise AppAlreadyExistsException("Cannot deploy the app \"" + appname + "\" because it already exists in environment \"" + envname + "\" (Roles found: " + ", ".join(activeRoles)  + ")")
+
         for role in createAppInRoles:
             self.app.logger.info("Creating the app in environment \"" + envname + "\" role \"" + role + "\" (" + envconfig[role]["role"] + ")")
             for server in envconfig[role]["servers"]:
@@ -89,22 +118,12 @@ class SplunkDeployer:
                 remoteappdir = os.path.join(srv["path"], appname)
                 rc, stdout, stderr = ssh.call([ "mkdir", os.path.join(srv["path"], appname) ])
                 if rc != 0:
-                    self.app.logger.warning("Cannot create the directory \"" + os.path.join(srv["path"], appname) + "\" on host \"" + srv["hostname"] + "\". Failed with rc " + rc + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                    self.app.logger.warning("Cannot create the directory \"" + os.path.join(srv["path"], appname) + "\" on host \"" + srv["hostname"] + "\". Failed with rc " + str(rc) + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                 else:
                     self.app.logger.debug("Succsessfully created the directory \"" + os.path.join(srv["path"], appname) + "\" on host \"" + srv["hostname"] + "\".")
 
 
     def _deployAppToEnv(self, ssh, appname, appdir, appconfig, envname, envconfig):
-        # configuration check
-        for role in envconfig:
-            assert "role" in envconfig[role], "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.role\" is missing"
-            assert envconfig[role]["role"] in self._roles, "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.role\" is not properly configured. Found \"" + envconfig[role]["role"] + "\", but expecting one of: " + ", ".join(self._roles.keys())
-            for server in envconfig[role]["servers"]:
-                srv = envconfig[role]["servers"][server]
-                assert isinstance(srv, Configuration), "The role \"" + role + "\" in environment \"" + envname + "\" is not properly configured."
-                for key in ["hostname", "path"]:
-                    assert key in srv, "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is missing"
-                    assert type(srv[key]) == str and srv[key] != "", "The key \"SplunkDeployment.envs.'" + envname + "'.'" + role + "'.'" + server +  "'.'" + key + "'\" is not properly configured"
         # check where to deploy && run optional pre local
         deployToRoles = []
         for role in envconfig:
@@ -168,14 +187,14 @@ class SplunkDeployer:
                 if ssh is None:
                     rc, stdout, stderr = call(cmd, shell=True)
                     if rc != 0:
-                        self.app.logger.warning(key.upper()  + " Command " + str(cmd) + " failed with rc " + rc + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                        self.app.logger.warning(key.upper()  + " Command " + str(cmd) + " failed with rc " + str(rc) + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                         return False
                     else:
                         self.app.logger.debug(key.upper() + " Command " + str(cmd) + " was successful:\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                 else:
                     rc, stdout, stderr = ssh.call(cmd)
                     if rc != 0:
-                        self.app.logger.warning(key.upper()  + " Command " + str(cmd) + " failed on host \"" + ssh.host + "\" with rc " + rc + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                        self.app.logger.warning(key.upper()  + " Command " + str(cmd) + " failed on host \"" + ssh.host + "\" with rc " + str(rc) + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                         return False
                     else:
                         self.app.logger.debug(key.upper() + " Command " + str(cmd) + " was successful on host \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
@@ -211,14 +230,29 @@ class SplunkDeployer:
         envs = self.app.configuration.get("SplunkDeployment.envs")
         if self.app.options["--env:"] == "ALL":
             for env in envs:
-                self._createAppInEnv(ssh, appname, appdir, appconfig, env, envs[env], createAppInRoles)
+                self._createAppInEnv(ssh, appname, appdir, appconfig, env, envs[env], createAppInRoles, "-f" in self.app.options)
         else:
             env = self.app.options["--env:"]
             if env in envs:
-                self._createAppInEnv(ssh, appname, appdir, appconfig, env, envs[env], createAppInRoles)
+                self._createAppInEnv(ssh, appname, appdir, appconfig, env, envs[env], createAppInRoles, "-f" in self.app.options)
             else:
                 raise RuntimeError("The environment \"" + env + "\" does not exist.")
 
+    def _removeApp(self, ssh, appname):
+        self.app.logger.info("Removing the splunk app: " + appname)
+        appdir, appconfig = self._getAppDirConfig(appname)
+        self.app.logger.debug("App found in path: " + appdir)
+        # remove from environments
+        envs = self.app.configuration.get("SplunkDeployment.envs")
+        if self.app.options["--env:"] == "ALL":
+            for env in envs:
+                self._removeAppFromEnv(ssh, appname, appdir, appconfig, env, envs[env])
+        else:
+            env = self.app.options["--env:"]
+            if env in envs:
+                self._removeAppFromEnv(ssh, appname, appdir, appconfig, env, envs[env])
+            else:
+                raise RuntimeError("The environment \"" + env + "\" does not exist.")
 
     def _runBeforeDeployment(self, ssh, envname, rolename):
         if not envname in self._affectedServers:
@@ -286,12 +320,36 @@ class SplunkDeployer:
         self._runAfterDeployment(ssh)
 
         t = timeit.default_timer() - t
-        if t < 10:
+        if t < 15:
             self.app.logger.info("Deployment took: {:.4f} seconds".format(t))
         else:
             self.app.logger.warning("Deployment took: {:.4f} seconds".format(t))
 
             
+    def remove(self, app):
+        self._affectedServers = {}
+        self.app = app
+        if not "--env:" in self.app.options:
+            self.app.options["--env:"] = "ALL"
+        else:
+            self.app.options["--env:"] = self.app.options["--env:"].upper()
+
+        t = timeit.default_timer()
+
+        ssh = SSH()
+        if "ALL"  in self.app.options['--app:']:
+            raise AppNotFoundException("Cannot remove an app called ALL, because it is a reserved word")
+        else:
+            for appname in self.app.options['--app:']:
+                self._removeApp(ssh, appname)
+
+        t = timeit.default_timer() - t
+        if t < 15:
+            self.app.logger.info("Removal took: {:.4f} seconds".format(t))
+        else:
+            self.app.logger.warning("Removal took: {:.4f} seconds".format(t))
+
+
     def create(self, app):
         self._affectedServers = {}
         self.app = app
@@ -313,7 +371,7 @@ class SplunkDeployer:
         self._runAfterDeployment(ssh)
 
         t = timeit.default_timer() - t
-        if t < 10:
+        if t < 15:
             self.app.logger.info("Creation took: {:.4f} seconds".format(t))
         else:
             self.app.logger.warning("Creation took: {:.4f} seconds".format(t))

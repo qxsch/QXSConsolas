@@ -89,6 +89,18 @@ routes:
       showCliName: False
       showCliDescription: False
       logger: deploy.app
+    RemoveApp:
+      func: CTSplunk.Deploy.RemoveApp
+      description: Remove an app from splunk
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    InventoryTest:
+      func: CTSplunk.Inventory.Test
+      description: Inventory Test
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
     Test:
       func: CTSplunk.Test.Test
       description: My little test
