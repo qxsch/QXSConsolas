@@ -8,8 +8,8 @@ from SplunkDeployer import SplunkDeployer
     Name = "Deploy an app",
     Description = "Deploys an app to a splunk environment",
     Opts = [ 
-        { "argument": "--env:", "default": "ALL", "description": "The targeted Splunk environment", "valuename": "ENV" },
         { "argument": "--app:", "required": True, "multiple": True,  "description": "The app that should be deployed", "valuename": "APP" },
+        { "argument": "--env:", "default": "ALL", "description": "The targeted Splunk environment", "valuename": "ENV" },
     ]
 )
 def DeployApp(app):
@@ -20,9 +20,9 @@ def DeployApp(app):
     Name = "Create an app",
     Description = "Creates an app on a splunk environment",
     Opts = [ 
-        { "argument": "--env:", "default": "ALL", "description": "The targeted Splunk environment", "valuename": "ENV" },
         { "argument": "--app:",  "required": True, "multiple": True,  "description": "The app that should be deployed", "valuename": "APP" },
         { "argument": "--role:", "required": True, "multiple": True,  "description": "Create the app on the following roles", "valuename": "ROLE" },
+        { "argument": "--env:", "default": "ALL", "description": "The targeted Splunk environment", "valuename": "ENV" },
         { "argument": "-f", "description": "Force the app creation." },
     ]
 )
@@ -34,8 +34,8 @@ def CreateApp(app):
     Name = "Remove an app",
     Description = "Removes an app from a splunk environment",
     Opts = [ 
-        { "argument": "--env:", "default": "ALL", "description": "The targeted Splunk environment", "valuename": "ENV" },
         { "argument": "--app:",  "required": True, "multiple": True,  "description": "The app that should be deployed", "valuename": "APP" },
+        { "argument": "--env:", "default": "ALL", "description": "The targeted Splunk environment", "valuename": "ENV" },
     ]
 )
 def RemoveApp(app):

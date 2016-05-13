@@ -16,6 +16,7 @@ class ArgumentParser:
     Parses cli arguments and options from the sys.argv or another list
     """
     _opts = {}
+    _optsOrder = []
 
     options = {}
     arguments = []
@@ -41,6 +42,7 @@ class ArgumentParser:
         """
         Returns a dict of the current option definitions with references collapsed in their final parent
         """
+        order = []
         definitions = {}
         for key in self._opts:
             finalKey=self._resolveFinalKey(key)
@@ -51,8 +53,11 @@ class ArgumentParser:
                     definitions[finalKey][subKey] = self._opts[finalKey][subKey]
             else:
                 definitions[finalKey]["referencedBy"].append(key)
+        for key in self._optsOrder:
+            if key in definitions:
+                order.append(key)
                 
-        return definitions
+        return [definitions, order]
 
     def clearOptionDefinitions(self):
         """
@@ -84,6 +89,8 @@ class ArgumentParser:
             "references": references,
             "valuename": str(valuename)
         }
+        self._optsOrder.append(argument)
+
 
     def _resolveFinalKey(self, key):
         """
@@ -331,7 +338,7 @@ class Application:
         """
         Prints the the help of the application
         """
-        definition = self._argparser.getCollapsedOptionDefinitions()
+        definition, order = self._argparser.getCollapsedOptionDefinitions()
         if showName and not self.name is None and self.name != "":
             length = 0 
             for line in self.name.split("\n"):
@@ -341,7 +348,7 @@ class Application:
             puts(colored.green("=" * length) + "\n")
         if showDescription and not self.description is None and self.description != "":
             puts(self.description + "\n")
-        for key in definition:
+        for key in order:
             puts(self.formatArgumentDefinitionBlock(key, definition[key]))
         puts(self.formatArgumentDefinitionBlock("-v", { "description": "Enable debug to console output (Be verbose)", "default": None, "required": False, "multiple": False, "referencedBy": [], "valuename": "VALUE" }))
         puts(self.formatArgumentDefinitionBlock("-q", { "description": "Disable all console output (Be quiet)", "default": None, "required": False, "multiple": False, "referencedBy": [], "valuename": "VALUE" }))
