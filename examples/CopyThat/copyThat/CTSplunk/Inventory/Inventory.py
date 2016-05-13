@@ -9,19 +9,32 @@ class GenericInventory:
     _attributes = {}
     _classId = None
     _objectName = None
+    _objectNameHR = None
     _objectSubName = None
+    _objectSubNameHR = None
 
-    def __init__(self, sqlAlchemyConnection, namespace, class_name, objectName=None, objectSubName=None):
+    def __init__(self, sqlAlchemyConnection, namespace, class_name, objectName=None, objectNameHR=None, objectSubName=None, objectSubNameHR=None):
         self._connection = sqlAlchemyConnection
         self._namespace = namespace
         self._class_name = class_name
         self._loadAttributes()
         if objectName is None:
             objectName="object_name"
+        if objectNameHR is None:
+            objectNameHR="Object Name"
         if objectSubName is None:
             objectSubName="object_subname"
-        self._objectName = objectName
-        self._objectSubName = objectSubName
+        if objectSubNameHR is None:
+            objectSubNameHR="Object Sub-Name"
+        self._objectName = str(objectName)
+        self._objectSubName = str(objectSubName)
+        self._objectNameHR = str(objectNameHR)
+        self._objectSubNameHR = str(objectSubNameHR)
+
+    def getObjectNames(self):
+        return [self._objectName, self._objectSubName]
+    def getObjectNamesHR(self):
+        return [self._objectNameHR, self._objectSubNameHR]
 
     def _loadAttributes(self):
         for row in self._connection.execute(ex.select([md.InventoryClasses.c.class_namespace, md.InventoryClasses.c.class_name, md.InventoryClassAttributes]).select_from(ex.join(md.InventoryClassAttributes, md.InventoryClasses, md.InventoryClassAttributes.c.class_id == md.InventoryClasses.c.class_id)).where(and_(md.InventoryClasses.c.class_namespace == self._namespace, md.InventoryClasses.c.class_name == self._class_name))):
@@ -87,14 +100,14 @@ class GenericInventory:
 
 class IndexInventory(GenericInventory):
     def __init__(self, sqlAlchemyConnection):
-        GenericInventory.__init__(self, sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "sourcetypeName")
+        GenericInventory.__init__(self, sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
 
     def search(self, indexName=None, sourcetypeName=None, **kwargs):
         return GenericInventory.search(self, object_name=indexName, object_subname=sourcetypeName, **kwargs)
 
 class AppInventory(GenericInventory):
     def __init__(self, sqlAlchemyConnection):
-        GenericInventory.__init__(self, sqlAlchemyConnection, "Apps", "Apps", "appName")
+        GenericInventory.__init__(self, sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
 
     def search(self, appName=None, **kwargs):
         return GenericInventory.search(self, object_name=appName, object_subname=None, **kwargs)
