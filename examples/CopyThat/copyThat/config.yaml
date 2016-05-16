@@ -97,9 +97,15 @@ routes:
       showCliName: False
       showCliDescription: False
       logger: deploy.app
-    InventoryTest:
-      func: CTSplunk.Inventory.Test
-      description: Inventory Test
+    SearchIndex:
+      func: CTSplunk.Inventory.SearchIndex
+      description: Search the Indexes Inventory
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    SearchApp:
+      func: CTSplunk.Inventory.SearchApp
+      description: Search the Apps Inventory
       showCliName: False
       showCliDescription: False
       logger: deploy.app

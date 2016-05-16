@@ -3,7 +3,7 @@ import sqlalchemy.sql.expression as ex
 from sqlalchemy.sql import and_, or_
 
 
-class GenericInventory:
+class GenericInventory(object):
     _connection = None
     _transaction = None
     _attributes = {}
@@ -17,6 +17,7 @@ class GenericInventory:
         self._connection = sqlAlchemyConnection
         self._namespace = namespace
         self._class_name = class_name
+        self._attributes = {}
         self._loadAttributes()
         if objectName is None:
             objectName="object_name"
@@ -100,16 +101,21 @@ class GenericInventory:
 
 class IndexInventory(GenericInventory):
     def __init__(self, sqlAlchemyConnection):
-        GenericInventory.__init__(self, sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
+        self._attributes = {}
+        #GenericInventory.__init__(self, sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
+        super(IndexInventory, self).__init__(sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
 
     def search(self, indexName=None, sourcetypeName=None, **kwargs):
-        return GenericInventory.search(self, object_name=indexName, object_subname=sourcetypeName, **kwargs)
+        #return GenericInventory.search(self, object_name=indexName, object_subname=sourcetypeName, **kwargs)
+        return super(IndexInventory, self).search(object_name=indexName, object_subname=sourcetypeName, **kwargs)
 
 class AppInventory(GenericInventory):
     def __init__(self, sqlAlchemyConnection):
-        GenericInventory.__init__(self, sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
+        #GenericInventory.__init__(self, sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
+        super(AppInventory, self).__init__(sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
 
     def search(self, appName=None, **kwargs):
-        return GenericInventory.search(self, object_name=appName, object_subname=None, **kwargs)
+        #return GenericInventory.search(self, object_name=appName, object_subname=None, **kwargs)
+        return super(AppInventory, self).search(object_name=appName, object_subname=None, **kwargs)
 
 
