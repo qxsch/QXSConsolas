@@ -31,7 +31,7 @@ try:
 except:
     pass
 
-def _GenerateOptions(name, opts, optionalOpts=[], prefix="attr-", ignoreMandatory=False):
+def _GenerateOptions(name, opts, optionalOpts=[], prefix="attr-", ignoreMandatory=False, setDefaultValues=True, prefixDescription=""):
     try:
         inv = GetInventory(name)
     except:
@@ -41,13 +41,19 @@ def _GenerateOptions(name, opts, optionalOpts=[], prefix="attr-", ignoreMandator
         if v["attr_default"] is None:
             if v["attr_mandatory"]:
                 if ignoreMandatory:
-                    opts.append({ "argument": "--" + prefix + k + "=",  "required": False, "description": v["attr_name"], "valuename": str(v["attr_type"]).upper() })
+                    opts.append({ "argument": "--" + prefix + k + "=",  "required": False, "description": prefixDescription + v["attr_name"], "valuename": str(v["attr_type"]).upper() })
                 else:
-                    opts.append({ "argument": "--" + prefix + k + "=",  "required": bool(v["attr_mandatory"]), "description": v["attr_name"], "valuename": str(v["attr_type"]).upper() })
+                    opts.append({ "argument": "--" + prefix + k + "=",  "required": bool(v["attr_mandatory"]), "description": prefixDescription + v["attr_name"], "valuename": str(v["attr_type"]).upper() })
             else:
-                optionalOpts.append({ "argument": "--" + prefix + k + "=",  "required": bool(v["attr_mandatory"]), "description": v["attr_name"], "valuename": str(v["attr_type"]).upper() })
+                optionalOpts.append({ "argument": "--" + prefix + k + "=",  "required": bool(v["attr_mandatory"]), "description": prefixDescription + v["attr_name"], "valuename": str(v["attr_type"]).upper() })
         else:
-            optionalOpts.append({ "argument": "--" + prefix + k + "=",  "default": v["attr_default"], "description": v["attr_name"], "valuename": str(v["attr_type"]).upper() })
+            if setDefaultValues:
+                optionalOpts.append({ "argument": "--" + prefix + k + "=",  "default": v["attr_default"], "description": prefixDescription + v["attr_name"], "valuename": str(v["attr_type"]).upper() })
+            else:
+                if v["attr_mandatory"] and not ignoreMandatory:
+                    opts.append({ "argument": "--" + prefix + k + "=",  "required": bool(v["attr_mandatory"]), "description": prefixDescription + v["attr_name"], "valuename": str(v["attr_type"]).upper() })
+                else:
+                    optionalOpts.append({ "argument": "--" + prefix + k + "=", "description": prefixDescription + v["attr_name"], "valuename": str(v["attr_type"]).upper() })
 
     opts.extend(optionalOpts)
     return opts
@@ -64,9 +70,9 @@ def _GetAttrOptions(name, opts, prefix="attr-"):
     Name = "Search the Indexes inventory",
     Description = "Search the Indexes inventory",
     Opts = _GenerateOptions("Indexes", [ 
-        { "argument": "--index:",  "required": False, "description": "The name of the Index", "valuename": "INDEXNAME" },
-        { "argument": "--sourcetype:", "required": False, "description": "The name of the SourceType", "valuename": "SOURCETYPENAME" },
-    ], [], prefix="", ignoreMandatory=True)
+        { "argument": "--index:",  "required": False, "description": "Search by the name of the Index", "valuename": "INDEXNAME" },
+        { "argument": "--sourcetype:", "required": False, "description": "Saerch by the name of the SourceType", "valuename": "SOURCETYPENAME" },
+    ], [], prefix="", prefixDescription="Search by ", ignoreMandatory=True, setDefaultValues=False)
 )
 def SearchIndex(app):
     searchNames = {}
@@ -84,7 +90,9 @@ def SearchIndex(app):
         width = width + 1
         if width > 40:
             width = 40
+        c = 0
         for entry in inv.lookupAttributes(inv.search(indexName=searchNames["--index:"], sourcetypeName=searchNames["--sourcetype:"], **searchAttrs)):
+            c = c + 1
             puts(columns(["ID:", width], [colored.green(str(entry["object_id"])), None]))
             puts(columns(["Index:", width], [colored.green(str(entry["indexName"])), None]))
             puts(columns(["Sourcetype:", width], [colored.green(str(entry["sourcetypeName"])), None]))
@@ -92,13 +100,15 @@ def SearchIndex(app):
                 puts(columns([attrs[k]["attr_name"]+":", width], [str(v), None]))
             puts()
 
+        puts(colored.yellow(str(c) + " entries found."))
+
+
 @CliApp(
     Name = "Search the Apps inventory",
     Description = "Search the Apps inventory",
-#    Opts = []
     Opts = _GenerateOptions("Apps", [ 
-        { "argument": "--app:",  "required": False, "description": "The name of the App", "valuename": "APP" },
-    ], [], prefix="", ignoreMandatory=True)
+        { "argument": "--app:",  "required": False, "description": "Search by the name of the App", "valuename": "APP" },
+    ], [], prefix="", prefixDescription="Search by ", ignoreMandatory=True, setDefaultValues=False)
 )
 def SearchApp(app):
     searchNames = {}
@@ -116,11 +126,15 @@ def SearchApp(app):
         width = width + 1
         if width > 40:
             width = 40
+        c = 0
         for entry in inv.lookupAttributes(inv.search(appName=searchNames["--app:"], **searchAttrs)):
+            c = c + 1
             puts(columns(["ID:", width], [colored.green(str(entry["object_id"])), None]))
             puts(columns(["App:", width], [colored.green(str(entry["appName"])), None]))
             for k, v in entry["attributes"].iteritems():
                 puts(columns([attrs[k]["attr_name"]+":", width], [str(v), None]))
             puts()
+
+        puts(colored.yellow(str(c) + " entries found."))
 
 
