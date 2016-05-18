@@ -2,6 +2,10 @@ import Metadata as md
 import sqlalchemy.sql.expression as ex
 from sqlalchemy.sql import and_, or_
 
+class LookupException(Exception):
+    pass
+class EmptyLookupException(LookupException):
+    pass
 
 class GenericInventory(object):
     _connection = None
@@ -47,12 +51,25 @@ class GenericInventory(object):
     def getAttributes(self):
         return self._attributes
 
+    def getObjectById(self, object_id):
+        if object_id is None:
+            raise TypeError("object_id must be of type int")
+        object_id = int(object_id)
+        rows = self.search(object_id)
+        if len(rows) == 1:
+            return rows[0]
+        if len(rows) == 0:
+            raise EmptyLookupException("No objects were found for object_id " + str(object_id))
+        raise LookupException("Too many objects were found for object_id " + str(object_id))
+
     def list(self):
         return self.search()
 
-    def search(self, object_name=None, object_subname=None, **kwargs):
+    def search(self, object_id=None, object_name=None, object_subname=None, **kwargs):
         andList = [ md.InventoryObjects.c.class_id == self._classId ]
         orList = []
+        if not object_id is None:
+            andList.append(md.InventoryObjects.c.object_id == object_id)
         if not object_name is None:
             andList.append(md.InventoryObjects.c.object_name.like(object_name))
         if not object_subname is None:
@@ -105,17 +122,17 @@ class IndexInventory(GenericInventory):
         #GenericInventory.__init__(self, sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
         super(IndexInventory, self).__init__(sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
 
-    def search(self, indexName=None, sourcetypeName=None, **kwargs):
+    def search(self, object_id=None, indexName=None, sourcetypeName=None, **kwargs):
         #return GenericInventory.search(self, object_name=indexName, object_subname=sourcetypeName, **kwargs)
-        return super(IndexInventory, self).search(object_name=indexName, object_subname=sourcetypeName, **kwargs)
+        return super(IndexInventory, self).search(object_id=object_id, object_name=indexName, object_subname=sourcetypeName, **kwargs)
 
 class AppInventory(GenericInventory):
     def __init__(self, sqlAlchemyConnection):
         #GenericInventory.__init__(self, sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
         super(AppInventory, self).__init__(sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
 
-    def search(self, appName=None, **kwargs):
+    def search(self, object_id=None, appName=None, **kwargs):
         #return GenericInventory.search(self, object_name=appName, object_subname=None, **kwargs)
-        return super(AppInventory, self).search(object_name=appName, object_subname=None, **kwargs)
+        return super(AppInventory, self).search(object_id=object_id, object_name=appName, object_subname=None, **kwargs)
 
 

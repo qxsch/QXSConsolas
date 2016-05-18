@@ -3,6 +3,7 @@ from QXSConsolas.Cli import CliApp
 from QXSConsolas.Configuration import GetSystemConfiguration
 from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException
 from Inventory import IndexInventory, AppInventory
+from Handler import ConsoleHandler
 from sqlalchemy import create_engine
 from clint.textui import puts, columns, colored, prompt, validators
 
@@ -83,25 +84,8 @@ def SearchIndex(app):
     searchAttrs = _GetAttrOptions("Indexes", app.options, prefix="")
     with GetInventoryEngine().begin() as conn:
         inv = IndexInventory(conn)
-        width = 0
-        attrs = inv.getAttributes()
-        for k,v in attrs.iteritems():
-            width = max(width, len(v["attr_name"]))
-        width = width + 1
-        if width > 40:
-            width = 40
-        c = 0
-        for entry in inv.lookupAttributes(inv.search(indexName=searchNames["--index:"], sourcetypeName=searchNames["--sourcetype:"], **searchAttrs)):
-            c = c + 1
-            puts(columns(["ID:", width], [colored.green(str(entry["object_id"])), None]))
-            puts(columns(["Index:", width], [colored.green(str(entry["indexName"])), None]))
-            puts(columns(["Sourcetype:", width], [colored.green(str(entry["sourcetypeName"])), None]))
-            for k, v in entry["attributes"].iteritems():
-                puts(columns([attrs[k]["attr_name"]+":", width], [str(v), None]))
-            puts()
-
-        puts(colored.yellow(str(c) + " entries found."))
-
+        h = ConsoleHandler(inv)
+        h.display(inv.search(indexName=searchNames["--index:"], sourcetypeName=searchNames["--sourcetype:"], **searchAttrs))
 
 @CliApp(
     Name = "Search the Apps inventory",
@@ -119,22 +103,6 @@ def SearchApp(app):
     searchAttrs = _GetAttrOptions("Apps", app.options, prefix="")
     with GetInventoryEngine().begin() as conn:
         inv = AppInventory(conn)
-        width = 0
-        attrs = inv.getAttributes()
-        for k,v in attrs.iteritems():
-            width = max(width, len(v["attr_name"]))
-        width = width + 1
-        if width > 40:
-            width = 40
-        c = 0
-        for entry in inv.lookupAttributes(inv.search(appName=searchNames["--app:"], **searchAttrs)):
-            c = c + 1
-            puts(columns(["ID:", width], [colored.green(str(entry["object_id"])), None]))
-            puts(columns(["App:", width], [colored.green(str(entry["appName"])), None]))
-            for k, v in entry["attributes"].iteritems():
-                puts(columns([attrs[k]["attr_name"]+":", width], [str(v), None]))
-            puts()
-
-        puts(colored.yellow(str(c) + " entries found."))
-
+        h = ConsoleHandler(inv)
+        h.display(inv.search(appName=searchNames["--app:"], **searchAttrs))
 
