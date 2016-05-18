@@ -97,15 +97,27 @@ routes:
       showCliName: False
       showCliDescription: False
       logger: deploy.app
-    SearchIndex:
+    SearchInvIndex:
       func: CTSplunk.Inventory.SearchIndex
       description: Search the Indexes Inventory
       showCliName: False
       showCliDescription: False
       logger: deploy.app
-    SearchApp:
+    CreateInvIndex:
+      func: CTSplunk.Inventory.CreateIndex
+      description: Creates an Index in the Indexes Inventory
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    SearchInvApp:
       func: CTSplunk.Inventory.SearchApp
       description: Search the Apps Inventory
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    CreateInvApp:
+      func: CTSplunk.Inventory.CreateApp
+      description: Creates an App in the Apps Inventory
       showCliName: False
       showCliDescription: False
       logger: deploy.app

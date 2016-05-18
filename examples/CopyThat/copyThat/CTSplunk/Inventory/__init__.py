@@ -72,7 +72,7 @@ def _GetAttrOptions(name, opts, prefix="attr-"):
     Description = "Search the Indexes inventory",
     Opts = _GenerateOptions("Indexes", [ 
         { "argument": "--index:",  "required": False, "description": "Search by the name of the Index", "valuename": "INDEXNAME" },
-        { "argument": "--sourcetype:", "required": False, "description": "Saerch by the name of the SourceType", "valuename": "SOURCETYPENAME" },
+        { "argument": "--sourcetype:", "required": False, "description": "Search by the name of the SourceType", "valuename": "SOURCETYPENAME" },
     ], [], prefix="", prefixDescription="Search by ", ignoreMandatory=True, setDefaultValues=False)
 )
 def SearchIndex(app):
@@ -84,15 +84,36 @@ def SearchIndex(app):
     searchAttrs = _GetAttrOptions("Indexes", app.options, prefix="")
     with GetInventoryEngine().begin() as conn:
         inv = IndexInventory(conn)
-        h = ConsoleHandler(inv)
+        h = ConsoleHandler(app, inv)
         h.display(inv.search(indexName=searchNames["--index:"], sourcetypeName=searchNames["--sourcetype:"], **searchAttrs))
+
+@CliApp(
+    Name = "Create an App in the Apps inventory",
+    Description = "Create an App in the Apps inventory",
+    Opts = _GenerateOptions("Indexes", [ 
+        { "argument": "--index:",  "required": True, "description": "Set the name of the Index", "valuename": "INDEXNAME" },
+        { "argument": "--sourcetype:", "required": True, "description": "Set the name of the SourceType", "valuename": "SOURCETYPENAME" },
+    ], [], prefix="", prefixDescription="Set a value for ", ignoreMandatory=True, setDefaultValues=True)
+)
+def CreateIndex(app):
+    searchNames = {}
+    for k in ["--app:"]:
+        searchNames[k] = None
+        if k in app.options:
+            searchNames[k] = app.options[k]
+    searchAttrs = _GetAttrOptions("Apps", app.options, prefix="")
+    with GetInventoryEngine().begin() as conn:
+        inv = IndexInventory(conn)
+        h = ConsoleHandler(app, inv)
+        h.update(searchNames["--app:"], None, **searchAttrs)
+
 
 @CliApp(
     Name = "Search the Apps inventory",
     Description = "Search the Apps inventory",
     Opts = _GenerateOptions("Apps", [ 
         { "argument": "--app:",  "required": False, "description": "Search by the name of the App", "valuename": "APP" },
-    ], [], prefix="", prefixDescription="Search by ", ignoreMandatory=True, setDefaultValues=False)
+    ], [], prefix="", prefixDescription="Search by ", ignoreMandatory=True, setDefaultValues=True)
 )
 def SearchApp(app):
     searchNames = {}
@@ -103,6 +124,26 @@ def SearchApp(app):
     searchAttrs = _GetAttrOptions("Apps", app.options, prefix="")
     with GetInventoryEngine().begin() as conn:
         inv = AppInventory(conn)
-        h = ConsoleHandler(inv)
+        h = ConsoleHandler(app, inv)
         h.display(inv.search(appName=searchNames["--app:"], **searchAttrs))
+
+@CliApp(
+    Name = "Create the Apps inventory",
+    Description = "Create the Apps inventory",
+    Opts = _GenerateOptions("Apps", [ 
+        { "argument": "--app:",  "required": True, "description": "Set the name of the App", "valuename": "APP" },
+    ], [], prefix="", prefixDescription="Set a value for ", ignoreMandatory=False, setDefaultValues=False)
+)
+def CreateApp(app):
+    searchNames = {}
+    for k in ["--app:"]:
+        searchNames[k] = None
+        if k in app.options:
+            searchNames[k] = app.options[k]
+    searchAttrs = _GetAttrOptions("Apps", app.options, prefix="")
+    with GetInventoryEngine().begin() as conn:
+        inv = AppInventory(conn)
+        h = ConsoleHandler(app, inv)
+        h.update(searchNames["--app:"], None, **searchAttrs)
+
 

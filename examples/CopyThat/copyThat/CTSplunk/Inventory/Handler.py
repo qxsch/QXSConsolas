@@ -2,12 +2,14 @@ from Inventory import GenericInventory
 from clint.textui import puts, columns, colored, prompt, validators
 
 
-class ConsoleHandler:
+class ConsoleHandler(object):
     _inventory = None
+    _app = None
 
-    def __init__(self, inventory):
+    def __init__(self, app, inventory):
         assert isinstance(inventory, GenericInventory), "Inventory is not a valid CTSplunk.Inventory.GenericInventory instance"
         self._inventory = inventory
+        self._app = app
 
 
     def _getObjectNames(self):
