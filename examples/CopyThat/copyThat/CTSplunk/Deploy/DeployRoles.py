@@ -81,8 +81,10 @@ class SplunkRole(object):
     def _syncLocalAppToRemote(self, ssh, appdir, remoteappdir, srvconfig):
         # use rsync
         if ssh.host == "localhost":
+            self.app.logger.debug("Running: " + " ".join(["rsync", "--delete", "--stats", "--exclude", ".git*", "-az", appdir + "/", remoteappdir + "/"]))
             rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-az", appdir + "/", remoteappdir + "/"])
         else:
+            self.app.logger.debug("Running: " + " ".join(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", appdir + "/", ssh.host + ":" + remoteappdir + "/"]))
             rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", appdir + "/", ssh.host + ":" + remoteappdir + "/"])
         if rc == 0:
             self.app.logger.debug("Syncing the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())

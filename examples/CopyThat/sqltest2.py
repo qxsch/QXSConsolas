@@ -53,8 +53,9 @@ with engine.begin() as trans:
             puts(columns([attrs[k]["attr_name"]+":", width], [str(v), None]))
         puts()
 
-    h = ConsoleHandler(ii)
-    h.add()
+    h = ConsoleHandler(None, ii)
+    #print(h.askForRequiredAttributes())
+    print(h.askForAllAttributes())
 
 """
 # Standard non-empty input

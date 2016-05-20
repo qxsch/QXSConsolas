@@ -73,7 +73,7 @@ def CreateAllInventoryTables(sqlAlchemyEngine):
     conn.execute(InventoryClassAttributes.insert().values({"class_id": result.class_id, "attr_key": "Description", "attr_name": "Description", "attr_type": "string", "attr_mandatory": False}))
     conn.execute(InventoryClassAttributes.insert().values({"class_id": result.class_id, "attr_key": "DataSensitive", "attr_name": "Data Sensitive", "attr_type": "bool", "attr_default": "False", "attr_mandatory": False}))
     conn.execute(InventoryClassAttributes.insert().values({"class_id": result.class_id, "attr_key": "DailyQuotaGB", "attr_name": "Daily Quota in GB", "attr_type": "float", "attr_mandatory": True}))
-    conn.execute(InventoryClassAttributes.insert().values({"class_id": result.class_id, "attr_key": "RetentionDays", "attr_name": "Retention in Days", "attr_type": "float", "attr_mandatory": True}))
+    conn.execute(InventoryClassAttributes.insert().values({"class_id": result.class_id, "attr_key": "RetentionDays", "attr_name": "Retention in Days", "attr_type": "int", "attr_mandatory": True}))
     conn.execute(InventoryClassAttributes.insert().values({"class_id": result.class_id, "attr_key": "QuotaAlertMails", "attr_name": "Quota Alert Mails", "attr_type": "string", "attr_mandatory": False}))
     conn.execute(InventoryClassAttributes.insert().values({"class_id": result.class_id, "attr_key": "CostCenter", "attr_name": "Cost Center", "attr_type": "string", "attr_mandatory": True}))
 
