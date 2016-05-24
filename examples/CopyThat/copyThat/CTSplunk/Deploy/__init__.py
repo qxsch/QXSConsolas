@@ -14,6 +14,12 @@ from SplunkDeployer import SplunkDeployer
 )
 def DeployApp(app):
     s = SplunkDeployer()
+    try:
+        s.WarnDeploymentTime = float(app.data["WarnDeploymentTime"])
+    except ValueError:
+        app.logger.debug("Failed to set the WarnDeploymentTime")
+    except:
+        pass
     s.deploy(app)
 
 @CliApp(
@@ -28,6 +34,12 @@ def DeployApp(app):
 )
 def CreateApp(app):
     s = SplunkDeployer()
+    try:
+        s.WarnDeploymentTime = float(app.data["WarnDeploymentTime"])
+    except ValueError:
+        app.logger.debug("Failed to set the WarnDeploymentTime")
+    except:
+        pass
     s.create(app)
 
 @CliApp(
@@ -40,6 +52,12 @@ def CreateApp(app):
 )
 def RemoveApp(app):
     s = SplunkDeployer()
+    try:
+        s.WarnDeploymentTime = float(app.data["WarnDeploymentTime"])
+    except ValueError:
+        app.logger.debug("Failed to set the WarnDeploymentTime")
+    except:
+        pass
     s.remove(app)
 
 

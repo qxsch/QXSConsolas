@@ -35,6 +35,8 @@ SplunkDeployment:
             hostname: "localhost"
             path: "/opt/shd-apps"
             target: "https://test:test@localhost:8089/"
+            exclude:
+              - "local"
         #prelocal:
         #  - [ "echo", "hi shd pre", "$trigger", "$appdir" ]
         #preremote:

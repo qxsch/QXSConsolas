@@ -78,14 +78,24 @@ class SplunkRole(object):
 	"""
         pass
 
-    def _syncLocalAppToRemote(self, ssh, appdir, remoteappdir, srvconfig):
+    def _syncLocalAppToRemote(self, ssh, appdir, remoteappdir, srvconfig, excludeList=[]):
+        cmdList = ["rsync", "--delete", "--stats", "--exclude", ".git*"]
+        # built-in excludes
+        for exclude in excludeList:
+            cmdList.extend(["--exclude", exclude])
+        # configured excludes
+        try:
+            for i in srvconfig["exclude"]:
+                cmdList.extend(["--exclude", srvconfig["exclude"][i]])
+        except:
+            pass
         # use rsync
         if ssh.host == "localhost":
-            self.app.logger.debug("Running: " + " ".join(["rsync", "--delete", "--stats", "--exclude", ".git*", "-az", appdir + "/", remoteappdir + "/"]))
-            rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-az", appdir + "/", remoteappdir + "/"])
+            cmdList.extend(["-az", appdir + "/", remoteappdir + "/"])
         else:
-            self.app.logger.debug("Running: " + " ".join(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", appdir + "/", ssh.host + ":" + remoteappdir + "/"]))
-            rc, stdout, stderr = call(["rsync", "--delete", "--stats", "--exclude", ".git*", "-aze", "ssh", appdir + "/", ssh.host + ":" + remoteappdir + "/"])
+            cmdList.extend(["-aze", "ssh", appdir + "/", ssh.host + ":" + remoteappdir + "/"])
+        self.app.logger.debug("Running: " + " ".join(cmdList))
+        rc, stdout, stderr = call(cmdList)
         if rc == 0:
             self.app.logger.debug("Syncing the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             return True
@@ -94,12 +104,51 @@ class SplunkRole(object):
             return False
 
     def _removeFileFromApp(self, ssh, remoteappdir, filename):
-        rc, stdout, stderr = ssh.call(["find", remoteappdir, "-name", filename, "-print", "-delete" ])
+        rc, stdout, stderr = ssh.call(["find", remoteappdir, "-name", filename, "-print", "-prune", "-exec", "rm", "-rf", "{}", ";"])
         if rc == 0:
             if stdout.strip() != "":
                 self.app.logger.warning("Deleted the following files on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
             self.app.logger.error("Failed to delete file \"" + filename + "\" from app on server \"" + ssh.host + "\" with rc " + str(rc) + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+
+
+class SingleInstanceRole(SplunkRole):
+    def doBeforeDeployment(self, ssh, srvconfig):
+        pass
+    def deployAppToServer(self, ssh, appname, appdir, appconfig, remoteappdir, srvconfig):
+	"""
+        deploys the app to the server
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection to the host
+        appname      string
+                     name of the app, that should be deployed
+        appdir       string
+                     local dir of the app, that should be deployed
+        appconfig    QXSConsolas.Configuration.Configuration
+                     configuration of the app, that should be deployed
+        remoteappdir string
+                     the remote directory name of the application
+        srvconfig    QXSConsolas.Configuration.Configuration
+                     server configuration with hostname and path
+	"""
+        if not self._syncLocalAppToRemote(ssh, appdir, remoteappdir, srvconfig):
+            raise DeploymentException("Failed to deploy the app to server \"" + ssh.host + "\"")
+
+    def doAfterDeployment(self, ssh, srvconfig):
+        # running the shd deployment
+        url, user, password = splitUrlCreds(srvconfig)
+        cmd = [ "splunk", "restart" ]
+        if not (url is None or url == ""):
+            cmd.append("-target")
+            cmd.append(url)
+        if not (user is None or user == "" or password is None or password == ""):
+            cmd.append("-auth")
+            cmd.append(user + ":" + password)
+        rc, stdout, stderr = ssh.call(cmd)
+        if rc == 0:
+            self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+        else:
+            self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
 
 class SearchHeadRole(SplunkRole):
@@ -274,6 +323,9 @@ roles["Indexer"] = roles["IDX"]
 roles["UFM"] = UnifiedForwarderManagementRole()
 roles["UnifiedForwarderManagementRole"] = roles["UFM"]
 roles["UnifiedForwarderManagement"] = roles["UFM"]
+roles["SNG"] = SingleInstanceRole()
+roles["SingleInstanceRole"] = roles["SNG"]
+roles["SingleInstance"] = roles["SNG"]
 
 def registerSplunkRole(key, role):
     if key in roles:
