@@ -1,10 +1,13 @@
 import Metadata as md
 import sqlalchemy.sql.expression as ex
+from sqlalchemy import func
 from sqlalchemy.sql import and_, or_
 
 class LookupException(Exception):
     pass
 class EmptyLookupException(LookupException):
+    pass
+class AttributeValidationException(Exception):
     pass
 
 class GenericInventory(object):
@@ -51,7 +54,22 @@ class GenericInventory(object):
     def getAttributes(self):
         return self._attributes
 
-    def getObjectById(self, object_id):
+    def getObjectIdByName(self, object_name, object_subname=None):
+        andList = [ md.InventoryObjects.c.class_id == self._classId, md.InventoryObjects.c.object_name == object_name ]
+        if not object_subname is None:
+            andList.append(md.InventoryObjects.c.object_subname == object_subname)
+        object_id = None
+        i = 0
+        for row in self._connection.execute(md.InventoryObjects.select().where(and_(*andList))):
+            i = i + 1
+            object_id = row["object_id"]
+        if i > 1:
+            raise LookupException("Too many objects were found")
+        if i == 0:
+            raise EmptyLookupException("No objects were found")
+        return object_id
+
+    def getObjectId(self, object_id):
         if object_id is None:
             raise TypeError("object_id must be of type int")
         object_id = int(object_id)
@@ -67,7 +85,6 @@ class GenericInventory(object):
 
     def search(self, object_id=None, object_name=None, object_subname=None, **kwargs):
         andList = [ md.InventoryObjects.c.class_id == self._classId ]
-        orList = []
         if not object_id is None:
             andList.append(md.InventoryObjects.c.object_id == object_id)
         if not object_name is None:
@@ -92,6 +109,91 @@ class GenericInventory(object):
                  self._objectSubName : row["object_subname"]
             })
         return data
+
+    def delete(self, object_id=None, object_name=None, object_subname=None):
+        if object_id is None:
+            object_id = self.getObjectIdByName(object_name, object_subname)
+        else:
+            self.getObjectId(object_id)
+        result = self._connection.execute(md.InventoryObjects.delete().where(and_(md.InventoryObjects.c.class_id == self._classId, md.InventoryObjects.c.object_id == object_id)))
+        return result.rowcount
+
+    def create(self, object_name, object_subname=None, **kwargs):
+        self._validateAttributes(kwargs, checkMandatoryAttrs=True)
+        valueList = { "class_id": self._classId, "object_name": object_name }
+        if not object_subname is None:
+            valueList["object_subname"] = object_subname
+        # create the object
+        result = self._connection.execute(md.InventoryObjects.insert().values(**valueList))
+        new_object_id = result.inserted_primary_key
+        if isinstance(new_object_id, list):
+            new_object_id = new_object_id.pop()
+
+        # update attributes
+        self.updateAttributes(new_object_id, **kwargs)
+        
+        return new_object_id
+
+    def removeAttributes(self, object_id=None, object_name=None, object_subname=None, attributeNames=[]):
+        assert isinstance(attributeNames, list), "attributeNames must be of type list"
+        if object_id is None:
+            object_id = self.getObjectIdByName(object_name, object_subname)
+        else:
+            self.getObjectId(object_id)
+        for k in attributeNames:
+            if k not in self._attributes:
+                raise AttributeValidationException("The attribute '" + k + "' does not exist.")
+        for k in self._attributes:
+            if (self._attributes[k]["attr_mandatory"]) and (k in attributeNames):
+                raise AttributeValidationException("The attribute '" + k + "' is mandatory and cannot be removed.")
+        for k in attributeNames:
+            if self.attributeExists(object_id, k):
+                 self._connection.execute(md.InventoryObjectAttributes.delete().where(and_(md.InventoryObjectAttributes.c.class_id == self._classId, md.InventoryObjectAttributes.c.object_id == object_id, md.InventoryObjectAttributes.c.attr_key == k)))
+
+    def attributeExists(self, object_id, attribute_name):
+        for count in self._connection.execute(ex.select([func.count()]).select_from(md.InventoryObjectAttributes).where(and_(md.InventoryObjectAttributes.c.class_id == self._classId, md.InventoryObjectAttributes.c.object_id == object_id, md.InventoryObjectAttributes.c.attr_key == attribute_name))):
+            count = count[0]
+            if count == 0:
+                return False
+            else:
+                return True
+
+    def updateAttributes(self, object_id=None, object_name=None, object_subname=None, **kwargs):
+        if object_id is None:
+            object_id = self.getObjectIdByName(object_name, object_subname)
+        else:
+            self.getObjectId(object_id)
+        self._validateAttributes(kwargs, checkMandatoryAttrs=False)
+        for k in kwargs:
+            if self.attributeExists(object_id, k):
+                self._connection.execute(md.InventoryObjectAttributes.update().where(and_(md.InventoryObjectAttributes.c.class_id == self._classId, md.InventoryObjectAttributes.c.object_id == object_id, md.InventoryObjectAttributes.c.attr_key == k)).values(attr_value=str(kwargs[k])))
+            else:
+                self._connection.execute(md.InventoryObjectAttributes.insert().values(object_id=object_id, class_id=self._classId, attr_key=str(k), attr_value=str(kwargs[k])))
+
+    def _validateAttributes(self, attributes, checkMandatoryAttrs=True):
+        # check attributes
+        for k in attributes:
+            if k not in self._attributes:
+                raise AttributeValidationException("The attribute '" + k + "' does not exist.")
+            if attributes[k] is None:
+                continue
+            try:
+                if self._attributes[k]["attr_type"] == "string":
+                    attributes[k] = str(attributes[k])
+                elif self._attributes[k]["attr_type"] == "bool":
+                    attributes[k] = bool(attributes[k])
+                elif self._attributes[k]["attr_type"] == "int":
+                    attributes[k] = int(attributes[k])
+                elif self._attributes[k]["attr_type"] == "float":
+                    attributes[k] = float(attributes[k])
+                elif self._attributes[k]["attr_type"] == "json":
+                    attributes[k] = str(attributes[k])
+            except:
+                raise AttributeValidationException("The attribute '" + k + "' is not of type '" + self._attributes[k]["attr_type"] + "'")
+        if checkMandatoryAttrs:
+            for k in self._attributes:
+                if (self._attributes[k]["attr_mandatory"]) and (k not in attributes):
+                    raise AttributeValidationException("The attribute '" + k + "' is mandatory and has not been set")
 
     def _lookupAttribtue(self, index):
         if isinstance(index, dict):

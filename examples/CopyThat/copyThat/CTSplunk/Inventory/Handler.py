@@ -185,7 +185,6 @@ class ConsoleHandler(object):
             puts()
 
         puts(colored.yellow(str(c) + " entries found."))
-        pass
 
 
 
