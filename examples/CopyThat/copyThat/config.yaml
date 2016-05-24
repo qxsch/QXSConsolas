@@ -87,6 +87,8 @@ routes:
       showCliName: False
       showCliDescription: False
       logger: deploy.app
+      data:
+        WarnDeploymentTime: 20
     CreateApp:
       func: CTSplunk.Deploy.CreateApp
       description: Create an new app on splunk
