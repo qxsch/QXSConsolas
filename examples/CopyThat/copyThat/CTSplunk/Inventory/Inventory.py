@@ -111,6 +111,7 @@ class GenericInventory(object):
         return data
 
     def delete(self, object_id=None, object_name=None, object_subname=None):
+        assert not (object_id is None and object_name is None and object_subname is None), "At least one identifier must be set"
         if object_id is None:
             object_id = self.getObjectIdByName(object_name, object_subname)
         else:
@@ -119,6 +120,7 @@ class GenericInventory(object):
         return result.rowcount
 
     def create(self, object_name, object_subname=None, **kwargs):
+        assert not (object_name is None and object_subname is None), "At least one identifier must be set"
         self._validateAttributes(kwargs, checkMandatoryAttrs=True)
         valueList = { "class_id": self._classId, "object_name": object_name }
         if not object_subname is None:
@@ -135,6 +137,7 @@ class GenericInventory(object):
         return new_object_id
 
     def removeAttributes(self, object_id=None, object_name=None, object_subname=None, attributeNames=[]):
+        assert not (object_id is None and object_name is None and object_subname is None), "At least one identifier must be set"
         assert isinstance(attributeNames, list), "attributeNames must be of type list"
         if object_id is None:
             object_id = self.getObjectIdByName(object_name, object_subname)
@@ -151,6 +154,7 @@ class GenericInventory(object):
                  self._connection.execute(md.InventoryObjectAttributes.delete().where(and_(md.InventoryObjectAttributes.c.class_id == self._classId, md.InventoryObjectAttributes.c.object_id == object_id, md.InventoryObjectAttributes.c.attr_key == k)))
 
     def attributeExists(self, object_id, attribute_name):
+        assert not (object_id is None), "At least one identifier must be set"
         for count in self._connection.execute(ex.select([func.count()]).select_from(md.InventoryObjectAttributes).where(and_(md.InventoryObjectAttributes.c.class_id == self._classId, md.InventoryObjectAttributes.c.object_id == object_id, md.InventoryObjectAttributes.c.attr_key == attribute_name))):
             count = count[0]
             if count == 0:
@@ -159,6 +163,7 @@ class GenericInventory(object):
                 return True
 
     def updateAttributes(self, object_id=None, object_name=None, object_subname=None, **kwargs):
+        assert not (object_id is None and object_name is None and object_subname is None), "At least one identifier must be set"
         if object_id is None:
             object_id = self.getObjectIdByName(object_name, object_subname)
         else:
@@ -224,17 +229,48 @@ class IndexInventory(GenericInventory):
         #GenericInventory.__init__(self, sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
         super(IndexInventory, self).__init__(sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
 
+    def getObjectIdByName(self, indexName, sourcetypeName):
+        return super(IndexInventory, self).getObjectIdByName(object_name=indexName, object_subname=sourcetypeName)
+
     def search(self, object_id=None, indexName=None, sourcetypeName=None, **kwargs):
-        #return GenericInventory.search(self, object_name=indexName, object_subname=sourcetypeName, **kwargs)
         return super(IndexInventory, self).search(object_id=object_id, object_name=indexName, object_subname=sourcetypeName, **kwargs)
+
+    def delete(self, object_id=None, indexName=None, sourcetypeName=None):
+        return super(IndexInventory, self).delete(object_id=object_id, object_name=indexName, object_subname=sourcetypeName)
+
+    def create(self, indexName, sourcetypeName=None, **kwargs):
+        return super(IndexInventory, self).create(object_name=indexName, object_subname=sourcetypeName, **kwargs)
+
+    def removeAttributes(self, object_id=None, indexName=None, sourcetypeName=None, attributeNames=[]):
+        return super(IndexInventory, self).removeAttributes(object_id=object_id, object_name=indexName, object_subname=sourcetypeName, attributeNames=attributeNames)
+
+    def updateAttributes(self, object_id=None, indexName=None, sourcetypeName=None, **kwargs):
+        return super(IndexInventory, self).updateAttributes(object_id=object_id, object_name=indexName, object_subname=sourcetypeName, **kwargs)
+
+
 
 class AppInventory(GenericInventory):
     def __init__(self, sqlAlchemyConnection):
         #GenericInventory.__init__(self, sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
         super(AppInventory, self).__init__(sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
 
+    def getObjectIdByName(self, appName):
+        return super(IndexInventory, self).getObjectIdByName(object_name=appName, object_subname=None)
+
     def search(self, object_id=None, appName=None, **kwargs):
         #return GenericInventory.search(self, object_name=appName, object_subname=None, **kwargs)
         return super(AppInventory, self).search(object_id=object_id, object_name=appName, object_subname=None, **kwargs)
+
+    def delete(self, object_id=None, appName=None):
+        return super(IndexInventory, self).delete(object_id=object_id, object_name=appName, object_subname=None)
+
+    def create(self, appName, **kwargs):
+        return super(IndexInventory, self).create(object_name=appName, object_subname=None, **kwargs)
+
+    def removeAttributes(self, object_id=None, appName=None, attributeNames=[]):
+        return super(IndexInventory, self).removeAttributes(object_id=object_id, object_name=appName, object_subname=None, attributeNames=attributeNames)
+
+    def updateAttributes(self, object_id=None, appName=None, **kwargs):
+        return super(IndexInventory, self).updateAttributes(object_id=object_id, object_name=appName, object_subname=None, **kwargs)
 
 

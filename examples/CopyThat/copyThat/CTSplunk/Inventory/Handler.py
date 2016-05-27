@@ -1,4 +1,4 @@
-from Inventory import GenericInventory
+from Inventory import GenericInventory, EmptyLookupException
 from clint.textui import puts, columns, colored, prompt, validators
 import re
 
@@ -132,10 +132,17 @@ class ConsoleHandler(object):
         return self.askForAllAttributes(predefinedAttrs, skipKeys)
 
 
-    def remove(self, object_id=None, object_name=None, object_subname=None):
+    def delete(self, object_id=None, object_name=None, object_subname=None):
         if object_id is None:
             object_name, object_subname = self.askForMissingObjectnames(object_name, object_subname)
-        # TODO: remove object
+            if object_subname is None:
+                c = self._inventory.delete(None, object_name)
+            else:
+                c = self._inventory.delete(None, object_name, object_subname)
+        else:
+            c = self._inventory.delete(object_id)
+        puts(colored.yellow(str(c) + " entries deleted."))
+
 
     def updateWithPrompt(self, object_name=None, object_subname=None):
         object_name, object_subname = self.askForMissingObjectnames(object_name, object_subname)
@@ -145,24 +152,47 @@ class ConsoleHandler(object):
     def update(self, object_id=None, object_name=None, object_subname=None, **kwargs):
         if object_id is None:
             object_name, object_subname = self.askForMissingObjectnames(object_name, object_subname)
-            if object_subname is None:
-                rows = self._inventory.search(None, object_name)
-            else:
-                rows = self._inventory.search(None, object_name, object_subname)
+            insert = True
+            try:
+                if object_subname is None:
+                    object_id = self._inventory.getObjectIdByName(object_name)
+                else:
+                    object_id = self._inventory.getObjectIdByName(object_name, object_subname)
+                insert = False
+            except EmptyLookupException:
+                insert = True
         else:
-            rows = self._inventory.search(object_id)
-        if len(rows) == 0:
-            # TODO: insert object
-            pass
-        elif len(rows) == 1:
-            pass
+            insert = True
+            try:
+                row = self._inventory.getObjectId(object_id)
+                insert = False
+            except EmptyLookupException:
+                insert = True
+
+        if len(row) == 0:
+            # create
+            attrs = {}
+            for k, v in self.askForRequiredAttributes(kwargs).iteritems():
+                if not(v is None):
+                    attrs[k]=v
+
+            if object_subname is None:
+                self._inventory.create(object_name, **attrs)
+            else:
+                self._inventory.create(object_name, object_subname, **attrs)
+        elif len(row)==1:
+            attrs = {}
+            delAttrs = []
+            for k,v in kwargs.iteritems():
+                if v is None:
+                    delAttrs.append(k)
+                else:
+                    attrs[k]=v
+            self._inventory.updateAttributes(object_id, **attrs)
+            self._inventory.removeAttributes(object_id, attributeNames=delAttrs)
         else:
             raise RuntimeError("Update failed: Too many objects to update")
-        for k, v in kwargs.iteritems():
-            if v is None:
-                continue
-            # TODO: update objectattribute
-        # TODO: remove all attrs that are None
+
 
     def display(self, entries):
         objectnamePrompt, objectnamePromptHR, objectsubnamePrompt, objectsubnamePromptHR = self._getObjectNames()
@@ -185,26 +215,5 @@ class ConsoleHandler(object):
             puts()
 
         puts(colored.yellow(str(c) + " entries found."))
-
-
-
-"""
-# Standard non-empty input
-name = prompt.query("What's your name?")
-
-# Set validators to an empty list for an optional input
-language = prompt.query("Your favorite tool (optional)?", validators=[])
-
-# Shows a list of options to select from
-inst_options = [{'selector':'1','prompt':'Full','return':'full'},
-                {'selector':'2','prompt':'Partial','return':'partial'},
-                {'selector':'3','prompt':'None','return':'no install'}]
-inst = prompt.options("Full or Partial Install", inst_options)
-
-# Use a default value and a validator
-path = prompt.query('Installation Path', default='/usr/local/bin/', validators=[validators.PathValidator()])
-
-puts(colored.blue('Hi {0}. Install {1} {2} to {3}'.format(name, inst, language or 'nothing', path)))
-"""
 
 
