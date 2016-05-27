@@ -169,7 +169,7 @@ class ConsoleHandler(object):
             except EmptyLookupException:
                 insert = True
 
-        if len(row) == 0:
+        if insert:
             # create
             attrs = {}
             for k, v in self.askForRequiredAttributes(kwargs).iteritems():
@@ -180,7 +180,7 @@ class ConsoleHandler(object):
                 self._inventory.create(object_name, **attrs)
             else:
                 self._inventory.create(object_name, object_subname, **attrs)
-        elif len(row)==1:
+        else:
             attrs = {}
             delAttrs = []
             for k,v in kwargs.iteritems():
@@ -190,8 +190,6 @@ class ConsoleHandler(object):
                     attrs[k]=v
             self._inventory.updateAttributes(object_id, **attrs)
             self._inventory.removeAttributes(object_id, attributeNames=delAttrs)
-        else:
-            raise RuntimeError("Update failed: Too many objects to update")
 
 
     def display(self, entries):
