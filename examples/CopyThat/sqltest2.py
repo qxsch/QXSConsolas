@@ -23,6 +23,14 @@ from clint.textui import puts, columns, colored, prompt, validators
 
 
 engine = GetInventoryEngine()
+
+#with engine.begin() as trans:
+#    ii = IndexInventory(trans)
+#    ch = ConsoleHandler(ii)
+#    object_id = ch.updateWithPrompt()
+#    #object_id = ch.update()
+#    #ch.delete(object_id)
+
 with engine.begin() as trans:
     ii = IndexInventory(trans)
     #print(ii.getAttributes())
@@ -37,7 +45,7 @@ with engine.begin() as trans:
     #print("IndexOwner='MW' and RetentionDays=20 search:")
     #print(ii.lookupAttributes(ii.search(IndexOwner='MW', RetentionDays=20)))
 
-    h = ConsoleHandler(None, ii)
+    h = ConsoleHandler(ii)
     h.display(ii.list())
    
     print("INSERTING XYZ") 

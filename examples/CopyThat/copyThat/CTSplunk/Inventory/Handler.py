@@ -47,12 +47,12 @@ class FloatValidator(object):
 
 class ConsoleHandler(object):
     _inventory = None
-    _app = None
+    _logger = None
 
-    def __init__(self, app, inventory):
+    def __init__(self, inventory, logger=None):
         assert isinstance(inventory, GenericInventory), "Inventory is not a valid CTSplunk.Inventory.GenericInventory instance"
         self._inventory = inventory
-        self._app = app
+        self._logger = logger
 
 
     def _getObjectNames(self):
@@ -143,11 +143,19 @@ class ConsoleHandler(object):
             c = self._inventory.delete(object_id)
         puts(colored.yellow(str(c) + " entries deleted."))
 
+    def exists(self, object_id=None, object_name=None, object_subname=None):
+        if object_id is None:
+            if object_subname is None:
+                return self._inventory.exists(None, object_name)
+            else:
+                return self._inventory.exists(None, object_name, object_subname)
+        else:
+            return self._inventory.exists(object_id)
 
     def updateWithPrompt(self, object_name=None, object_subname=None):
         object_name, object_subname = self.askForMissingObjectnames(object_name, object_subname)
         attrs = self.askForAllAttributes()
-        self.update(object_name, object_subname, **attrs)
+        return self.update(None, object_name, object_subname, **attrs)
 
     def update(self, object_id=None, object_name=None, object_subname=None, **kwargs):
         if object_id is None:
@@ -177,20 +185,23 @@ class ConsoleHandler(object):
                     attrs[k]=v
 
             if object_subname is None:
-                self._inventory.create(object_name, **attrs)
+                return self._inventory.create(object_name, **attrs)
             else:
-                self._inventory.create(object_name, object_subname, **attrs)
+                return self._inventory.create(object_name, object_subname, **attrs)
         else:
             attrs = {}
             delAttrs = []
+            attrDef = self._inventory.getAttributes()
             for k,v in kwargs.iteritems():
                 if v is None:
-                    delAttrs.append(k)
+                    if not attrDef[k]["attr_mandatory"]:
+                        delAttrs.append(k)
                 else:
                     attrs[k]=v
             self._inventory.updateAttributes(object_id, **attrs)
             self._inventory.removeAttributes(object_id, attributeNames=delAttrs)
 
+        return object_id
 
     def display(self, entries):
         objectnamePrompt, objectnamePromptHR, objectsubnamePrompt, objectsubnamePromptHR = self._getObjectNames()

@@ -54,6 +54,24 @@ class GenericInventory(object):
     def getAttributes(self):
         return self._attributes
 
+    def exists(self, object_id=None, object_name=None, object_subname=None):
+        if object_id is None:
+            try:
+                if object_subname is None:
+                    object_id = self.getObjectIdByName(object_name)
+                else:
+                    object_id = self.getObjectIdByName(object_name, object_subname)
+                found = True
+            except EmptyLookupException:
+                found = False
+        else:
+            try:
+                row = self._inventory.getObjectId(object_id)
+                found = True
+            except EmptyLookupException:
+                found = False
+        return found
+
     def getObjectIdByName(self, object_name, object_subname=None):
         andList = [ md.InventoryObjects.c.class_id == self._classId, md.InventoryObjects.c.object_name == object_name ]
         if not object_subname is None:
