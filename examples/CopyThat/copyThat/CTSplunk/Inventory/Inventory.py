@@ -244,7 +244,6 @@ class GenericInventory(object):
 class IndexInventory(GenericInventory):
     def __init__(self, sqlAlchemyConnection):
         self._attributes = {}
-        #GenericInventory.__init__(self, sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
         super(IndexInventory, self).__init__(sqlAlchemyConnection, "Indexes", "Indexes", "indexName", "Index", "sourcetypeName", "Sourcetype")
 
     def getObjectIdByName(self, indexName, sourcetypeName):
@@ -269,26 +268,24 @@ class IndexInventory(GenericInventory):
 
 class AppInventory(GenericInventory):
     def __init__(self, sqlAlchemyConnection):
-        #GenericInventory.__init__(self, sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
         super(AppInventory, self).__init__(sqlAlchemyConnection, "Apps", "Apps", "appName", "App", "", "")
 
     def getObjectIdByName(self, appName):
-        return super(IndexInventory, self).getObjectIdByName(object_name=appName, object_subname=None)
+        return super(AppInventory, self).getObjectIdByName(object_name=appName, object_subname=None)
 
     def search(self, object_id=None, appName=None, **kwargs):
-        #return GenericInventory.search(self, object_name=appName, object_subname=None, **kwargs)
         return super(AppInventory, self).search(object_id=object_id, object_name=appName, object_subname=None, **kwargs)
 
     def delete(self, object_id=None, appName=None):
-        return super(IndexInventory, self).delete(object_id=object_id, object_name=appName, object_subname=None)
+        return super(AppInventory, self).delete(object_id=object_id, object_name=appName, object_subname=None)
 
     def create(self, appName, **kwargs):
-        return super(IndexInventory, self).create(object_name=appName, object_subname=None, **kwargs)
+        return super(AppInventory, self).create(object_name=appName, object_subname=None, **kwargs)
 
     def removeAttributes(self, object_id=None, appName=None, attributeNames=[]):
-        return super(IndexInventory, self).removeAttributes(object_id=object_id, object_name=appName, object_subname=None, attributeNames=attributeNames)
+        return super(AppInventory, self).removeAttributes(object_id=object_id, object_name=appName, object_subname=None, attributeNames=attributeNames)
 
     def updateAttributes(self, object_id=None, appName=None, **kwargs):
-        return super(IndexInventory, self).updateAttributes(object_id=object_id, object_name=appName, object_subname=None, **kwargs)
+        return super(AppInventory, self).updateAttributes(object_id=object_id, object_name=appName, object_subname=None, **kwargs)
 
 

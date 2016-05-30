@@ -7,33 +7,7 @@ from sqlalchemy import create_engine, MetaData, Table, Column, Boolean, Integer,
 # fk = foreign
 # ck = check
 
-class NoInventoryEngine(Exception):
-    pass
-
-def GetInventoryEngine():
-    if GetInventoryEngine._engine is None:
-        raise NoInventoryEngine("SplunkInventory.datasource is invalid or not defined in the configuration.")
-    return GetInventoryEngine._engine
-
-def GetInventory(name):
-    if name in GetInventory._inventories:
-        return GetInventory._inventories[name]
-    if not GetInventory._inventories:
-        raise NoInventoryEngine("SplunkInventory.datasource is invalid or not defined in the configuration.")
-    raise KeyError("Inventory '" + name + "' does not exist.")
-
-# initialize the engine
-try:
-    GetInventory._inventories = {}
-    GetInventoryEngine._engine = None
-    GetInventoryEngine._engine = create_engine(GetSystemConfiguration().get("SplunkInventory.datasource"))
-
-    InventoryMetadata = MetaData(bind = GetInventoryEngine._engine)
-
-    GetInventory._inventories["Indexes"] = IndexInventory(GetInventoryEngine())
-    GetInventory._inventories["Apps"] = AppInventory(GetInventoryEngine())
-except:
-    InventoryMetadata = MetaData()
+InventoryMetadata = MetaData()
 
 
 InventoryClasses = Table(

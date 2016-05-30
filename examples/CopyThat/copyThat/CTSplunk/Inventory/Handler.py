@@ -152,9 +152,12 @@ class ConsoleHandler(object):
         else:
             return self._inventory.exists(object_id)
 
-    def updateWithPrompt(self, object_name=None, object_subname=None):
+    def updateWithPrompt(self, object_name=None, object_subname=None, updateAll=True):
         object_name, object_subname = self.askForMissingObjectnames(object_name, object_subname)
-        attrs = self.askForAllAttributes()
+        if updateAll:
+            attrs = self.askForAllAttributes()
+        else:
+            attrs = self.askForRequiredAttributes()
         return self.update(None, object_name, object_subname, **attrs)
 
     def update(self, object_id=None, object_name=None, object_subname=None, **kwargs):

@@ -89,18 +89,30 @@ routes:
       logger: deploy.app
       data:
         WarnDeploymentTime: 20
+        Inventory:
+          Active: True
+          Prompt: Required
     CreateApp:
       func: CTSplunk.Deploy.CreateApp
       description: Create an new app on splunk
       showCliName: False
       showCliDescription: False
       logger: deploy.app
+      data:
+        WarnDeploymentTime: 20
+        Inventory:
+          Active: True
+          Prompt: All
     RemoveApp:
       func: CTSplunk.Deploy.RemoveApp
       description: Remove an app from splunk
       showCliName: False
       showCliDescription: False
       logger: deploy.app
+      data:
+        WarnDeploymentTime: 20
+        Inventory:
+          Active: True
     SearchInvIndex:
       func: CTSplunk.Inventory.SearchIndex
       description: Search the Indexes Inventory

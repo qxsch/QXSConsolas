@@ -8,6 +8,10 @@ from clint.textui import puts, colored, indent
 from DeployRoles import getSplunkRoles
 import timeit
 from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException, AppAlreadyExistsException
+from CTSplunk.Inventory import GetInventoryEngine
+from CTSplunk.Inventory.Inventory import AppInventory
+from CTSplunk.Inventory.Handler import ConsoleHandler
+from clint.textui import puts, columns, colored, prompt, validators
 
 
 class SplunkDeployer:
@@ -287,6 +291,7 @@ class SplunkDeployer:
         else:
             self.app.options["--env:"] = self.app.options["--env:"].upper()
 
+
         t = timeit.default_timer()
 
         ssh = SSH()
@@ -326,7 +331,9 @@ class SplunkDeployer:
         else:
             self.app.logger.warning("Deployment took: {:.4f} seconds".format(t))
 
-            
+        self._createInventoryEntries()
+
+ 
     def remove(self, app):
         self._affectedServers = {}
         self.app = app
@@ -335,20 +342,22 @@ class SplunkDeployer:
         else:
             self.app.options["--env:"] = self.app.options["--env:"].upper()
 
+        if "ALL"  in self.app.options['--app:']:
+            raise AppNotFoundException("Cannot create an app called ALL, because it is a reserved word")
+
         t = timeit.default_timer()
 
         ssh = SSH()
-        if "ALL"  in self.app.options['--app:']:
-            raise AppNotFoundException("Cannot remove an app called ALL, because it is a reserved word")
-        else:
-            for appname in self.app.options['--app:']:
-                self._removeApp(ssh, appname)
+        for appname in self.app.options['--app:']:
+            self._removeApp(ssh, appname)
 
         t = timeit.default_timer() - t
         if t < self.WarnDeploymentTime:
             self.app.logger.info("Removal took: {:.4f} seconds".format(t))
         else:
             self.app.logger.warning("Removal took: {:.4f} seconds".format(t))
+
+        self._deleteInventoryEntries()
 
 
     def create(self, app):
@@ -359,15 +368,15 @@ class SplunkDeployer:
         else:
             self.app.options["--env:"] = self.app.options["--env:"].upper()
 
+        if "ALL"  in self.app.options['--app:']:
+            raise AppNotFoundException("Cannot create an app called ALL, because it is a reserved word")
+
         t = timeit.default_timer()
 
         ssh = SSH()
-        if "ALL"  in self.app.options['--app:']:
-            raise AppNotFoundException("Cannot create an app called ALL, because it is a reserved word")
-        else:
-            for appname in self.app.options['--app:']:
-                self._createApp(ssh, appname, self.app.options['--role:'])
-                self._deployApp(ssh, appname)
+        for appname in self.app.options['--app:']:
+            self._createApp(ssh, appname, self.app.options['--role:'])
+            self._deployApp(ssh, appname)
 
         self._runAfterDeployment(ssh)
 
@@ -376,5 +385,54 @@ class SplunkDeployer:
             self.app.logger.info("Creation took: {:.4f} seconds".format(t))
         else:
             self.app.logger.warning("Creation took: {:.4f} seconds".format(t))
-            
 
+        self._createInventoryEntries()
+
+            
+    def _deleteInventoryEntries(self):
+        try:
+            if self.app.data["Inventory"]["Active"]:
+                askForAll=True
+                try:
+                    engine = GetInventoryEngine()
+                    with engine.begin() as trans:
+                        inv = AppInventory(trans)
+                        ch = ConsoleHandler(inv, self.app.logger)
+                        
+                        for appname in self.app.options['--app:']:
+                            if ch.exists(None, appname):
+                                ch.delete(None, appname)
+                except BaseException as e:
+                    self.app.logger.exception(e)
+        except:
+            pass
+
+
+    def _createInventoryEntries(self):
+        try:
+            if self.app.data["Inventory"]["Active"]:
+                askForAll=True
+                if "Prompt" in self.app.data["Inventory"]:
+                    if str(self.app.data["Inventory"]["Prompt"]).lower() == "required":
+                        askForAll=False
+                    elif str(self.app.data["Inventory"]["Prompt"]).lower() == "all":
+                        askForAll=True
+                    else:
+                        self.app.logger.warning("Invalid setting for data.Inventory.Prompt, using all! (Allowed values are: Required, All)")
+                try:
+                    engine = GetInventoryEngine()
+                    with engine.begin() as trans:
+                        inv = AppInventory(trans)
+                        ch = ConsoleHandler(inv, self.app.logger)
+                        
+                        for appname in self.app.options['--app:']:
+                            if not ch.exists(None, appname):
+                                puts("")
+                                puts(colored.green("Please enter the inventory attributes for the app: " + appname))
+                                ch.updateWithPrompt(appname, updateAll=askForAll)
+                                puts("")
+                except BaseException as e:
+                    self.app.logger.exception(e)
+        except:
+            pass
+        
