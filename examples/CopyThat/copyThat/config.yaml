@@ -81,6 +81,12 @@ routes:
       You can configure the whole logging framework as well as pre- and post-deployment scripts.
     footer: Powered by QXS Consolas
   cliapps:
+    DumpConfig:
+      func: CTSplunk.DumpConfig
+      description: Dump the whole configuration
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
     DeployApp:
       func: CTSplunk.Deploy.DeployApp
       description: Deploy an app to splunk
