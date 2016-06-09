@@ -21,7 +21,7 @@ def DumpConfig(app):
     with indent():
         for appname in apps:
             puts(colored.red("app: ") + colored.green(appname))
-            for ckey, helptxt in {"directory": "APP DIRECTORY"}.iteritems():
+            for ckey, helptxt in {"directory": "Local app directory"}.iteritems():
                 with indent():
                     if str(helptxt) != "": puts(colored.blue("# " + str(helptxt)))
                     if ckey in apps[appname]:
