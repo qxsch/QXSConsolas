@@ -108,7 +108,8 @@ def RemoveApp(app):
     ]
 )
 def BackupApp(app):
-    pass
+    s = SplunkDeployer()
+    s.backup(app)
 
 
 @CliApp(
@@ -122,7 +123,9 @@ def BackupApp(app):
     ]
 )
 def RestoreApp(app):
-    pass
+    s = SplunkDeployer()
+    s.restore(app)
+
 
 @CliApp(
     Name = "Cross copy an app",

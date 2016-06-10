@@ -435,4 +435,35 @@ class SplunkDeployer:
                     self.app.logger.exception(e)
         except:
             pass
+
+    def _checkNodeConfiguration(self):
+        envs = self.app.configuration.get("SplunkNodes.envs")
+        for appName in self.app.options["--app:"]:
+            assert os.path.exists(os.path.join(self.app.options["--path:"], appName)), "The app \"" + appName + "\" does not exist under: " + self.app.options["--path:"]
+        assert self.app.options["--env:"] in envs, "The environment \"" + self.app.options["--env:"] + "\" does not exist."
+        assert self.app.options["--role:"] in envs[self.app.options["--env:"]], "The role \"" + self.app.options["--role:"] + "\" does not exist in environment \"" + self.app.options["--env:"] + "\"."
+
+    def backup(self, app):
+        self._affectedServers = {}
+        self.app = app
+        self._checkNodeConfiguration()
+        ssh = SSH()
+
+        envs = self.app.configuration.get("SplunkNodes.envs")
+        role = self._roles[envs[self.app.options["--env:"]][self.app.options["--role:"]]["role"]]
+        role.setRoleInfo(self.app, self.app.options["--env:"], envs[self.app.options["--env:"]], self.app.options["--role:"], envs[self.app.options["--env:"]][self.app.options["--role:"]])
+        self.app.logger.info("Taking a backup for the apps " + ", ".join(self.app.options["--app:"]) + " from environment \"" + self.app.options["--env:"] + "\" and role \"" + self.app.options["--role:"] + "\" to local path \"" + self.app.options["--path:"] + "\"")
+        role.restore(list(self.app.options["--app:"]), ssh, self.app.options["--path:"])
+
+    def restore(self, app):
+        self._affectedServers = {}
+        self.app = app
+        self._checkNodeConfiguration()
+        ssh = SSH()
         
+        envs = self.app.configuration.get("SplunkNodes.envs")
+        role = self._roles[envs[self.app.options["--env:"]][self.app.options["--role:"]]["role"]]
+        role.setRoleInfo(self.app, self.app.options["--env:"], envs[self.app.options["--env:"]], self.app.options["--role:"], envs[self.app.options["--env:"]][self.app.options["--role:"]])
+        self.app.logger.info("Restoring a backup for the apps " + ", ".join(self.app.options["--app:"]) + " from local path \"" + self.app.options["--path:"] + "\" to environment \"" + self.app.options["--env:"] + "\" and role \"" + self.app.options["--role:"] + "\"")
+        role.restore(list(self.app.options["--app:"]), ssh, self.app.options["--path:"])
+

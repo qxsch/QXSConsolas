@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import logging, os
+from QXSConsolas.Configuration import Configuration
 from QXSConsolas.Command import SSH, call
 from clint.textui import puts, colored, indent
 import timeit
@@ -198,7 +199,27 @@ class SingleInstanceRole(SplunkRole):
         localPath    string
                      the source path were the apps reside
 	"""
-        raise NotImplemented("Not implemented")
+        for app in appList:
+            for server in self._roleconfig["servers"]:
+                ssh.host = self._roleconfig["servers"][server]["hostname"]
+                if not True:
+                #if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig["servers"][server]):
+                    self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
+        for server in self._roleconfig["servers"]:
+            ssh.host = self._roleconfig["servers"][server]["hostname"]
+            url, user, password = splitUrlCreds(self._roleconfig["servers"][server])
+            cmd = [ "splunk", "restart" ]
+            if not (url is None or url == ""):
+                cmd.append("-target")
+                cmd.append(url)
+            if not (user is None or user == "" or password is None or password == ""):
+                cmd.append("-auth")
+                cmd.append(user + ":" + password)
+            rc, stdout, stderr = ssh.call(cmd)
+            if rc == 0:
+                self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            else:
+                self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
 
 class SearchHeadRole(SplunkRole):
@@ -262,7 +283,26 @@ class SearchHeadRole(SplunkRole):
         localPath    string
                      the source path were the apps reside
 	"""
-        raise NotImplemented("Not implemented")
+        for app in appList:
+            for server in self._roleconfig:
+                ssh.host = self._roleconfig[server]["hostname"]
+                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig[server]):
+                    self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
+        for server in self._roleconfig:
+            ssh.host = self._roleconfig[server]["hostname"]
+            url, user, password = splitUrlCreds(srvconfig)
+            cmd = [ "splunk", "restart" ]
+            if not (url is None or url == ""):
+                cmd.append("-target")
+                cmd.append(url)
+            if not (user is None or user == "" or password is None or password == ""):
+                cmd.append("-auth")
+                cmd.append(user + ":" + password)
+            rc, stdout, stderr = ssh.call(cmd)
+            if rc == 0:
+                self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            else:
+                self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
 
 class IndexerRole(SplunkRole):
@@ -356,10 +396,6 @@ class UnifiedForwarderManagementRole(SplunkRole):
         # running the idx deployment
         url, user, password = splitUrlCreds(srvconfig)
         cmd = [ "splunk", "reload", "deploy-server", "--answer-yes" ]
-        # andy says: do not set a target
-        #if not (url is None or url == ""):
-        #    cmd.append("-target")
-        #    cmd.append(url)
         if not (user is None or user == "" or password is None or password == ""):
             cmd.append("-auth")
             cmd.append(user + ":" + password)
@@ -391,7 +427,24 @@ class UnifiedForwarderManagementRole(SplunkRole):
         localPath    string
                      the source path were the apps reside
 	"""
-        raise NotImplemented("Not implemented")
+        for app in appList:
+            for server in self._roleconfig:
+                ssh.host = self._roleconfig[server]["hostname"]
+                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig[server]):
+                    self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
+        for server in self._roleconfig:
+            ssh.host = self._roleconfig[server]["hostname"]
+            url, user, password = splitUrlCreds(srvconfig)
+            cmd = [ "splunk", "reload", "deploy-server", "--answer-yes" ]
+            if not (user is None or user == "" or password is None or password == ""):
+                cmd.append("-auth")
+                cmd.append(user + ":" + password)
+            rc, stdout, stderr = ssh.call(cmd)
+            if rc == 0:
+                self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            else:
+                self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+
 
 
 def splitUrlCreds(url):

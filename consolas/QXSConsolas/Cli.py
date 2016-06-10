@@ -212,6 +212,11 @@ class ArgumentParser:
                self._setOption(lastKey, None, lastKeyOptDef)
             else:
                raise ArgumentParserException("The option \"" + lastKey + "\" requires a value.")
+        # set default values if missing
+        for key in self._opts:
+            if self._opts[key]["default"]:
+                if not key in self.options:
+                    self.options[key] = self._opts[key]["default"]
         return (self.options, self.arguments)
 
     def validateRequiredArguments(self):
