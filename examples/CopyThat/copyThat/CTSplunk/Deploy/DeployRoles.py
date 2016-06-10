@@ -202,8 +202,7 @@ class SingleInstanceRole(SplunkRole):
         for app in appList:
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
-                if not True:
-                #if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig["servers"][server]):
+                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig["servers"][server]):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
         for server in self._roleconfig["servers"]:
             ssh.host = self._roleconfig["servers"][server]["hostname"]
@@ -284,13 +283,13 @@ class SearchHeadRole(SplunkRole):
                      the source path were the apps reside
 	"""
         for app in appList:
-            for server in self._roleconfig:
-                ssh.host = self._roleconfig[server]["hostname"]
-                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig[server]):
+            for server in self._roleconfig["servers"]:
+                ssh.host = self._roleconfig["servers"][server]["hostname"]
+                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig["servers"][server]):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
-        for server in self._roleconfig:
-            ssh.host = self._roleconfig[server]["hostname"]
-            url, user, password = splitUrlCreds(srvconfig)
+        for server in self._roleconfig["servers"]:
+            ssh.host = self._roleconfig["servers"][server]["hostname"]
+            url, user, password = splitUrlCreds(self._roleconfig["servers"][server])
             cmd = [ "splunk", "restart" ]
             if not (url is None or url == ""):
                 cmd.append("-target")
@@ -428,14 +427,17 @@ class UnifiedForwarderManagementRole(SplunkRole):
                      the source path were the apps reside
 	"""
         for app in appList:
-            for server in self._roleconfig:
-                ssh.host = self._roleconfig[server]["hostname"]
-                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig[server]):
+            for server in self._roleconfig["servers"]:
+                ssh.host = self._roleconfig["servers"][server]["hostname"]
+                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig["servers"][server]):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
-        for server in self._roleconfig:
-            ssh.host = self._roleconfig[server]["hostname"]
-            url, user, password = splitUrlCreds(srvconfig)
+        for server in self._roleconfig["servers"]:
+            ssh.host = self._roleconfig["servers"][server]["hostname"]
+            url, user, password = splitUrlCreds(self._roleconfig["servers"][server])
             cmd = [ "splunk", "reload", "deploy-server", "--answer-yes" ]
+            if not (url is None or url == ""):
+                cmd.append("-target")
+                cmd.append(url)
             if not (user is None or user == "" or password is None or password == ""):
                 cmd.append("-auth")
                 cmd.append(user + ":" + password)
@@ -444,7 +446,6 @@ class UnifiedForwarderManagementRole(SplunkRole):
                 self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             else:
                 self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
-
 
 
 def splitUrlCreds(url):
