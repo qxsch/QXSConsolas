@@ -19,7 +19,7 @@ class SplunkRole(object):
 
     def setRoleInfo(self, cliapp, envname, envconfig, rolename, roleconfig):
 	"""
-        deploys the app to the server
+        sets the role info during deployment and backup/restores
         cliapp    QXSConsolas.Cli.ApplicationData
                   cli application data
         envname   string
@@ -75,6 +75,32 @@ class SplunkRole(object):
                      the ssh connection to the host
         srvconfig    QXSConsolas.Configuration.Configuration
                      server configuration with hostname and path
+	"""
+        pass
+
+    @abc.abstractmethod
+    def backup(self, appList, ssh, localPath):
+	"""
+        take a backup of some apps from a role and store it in localPath
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the destination path were the apps should be stored
+	"""
+        pass
+
+    @abc.abstractmethod
+    def restore(self, appList, ssh, localPath):
+	"""
+        restore a backup of some apps from localPath to a role
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the source path were the apps reside
 	"""
         pass
 
@@ -150,6 +176,30 @@ class SingleInstanceRole(SplunkRole):
         else:
             self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
+    def backup(self, appList, ssh, localPath):
+	"""
+        take a backup of some apps from a role and store it in localPath
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the destination path were the apps should be stored
+	"""
+        raise NotImplemented("Not implemented")
+
+    def restore(self, appList, ssh, localPath):
+	"""
+        restore a backup of some apps from localPath to a role
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the source path were the apps reside
+	"""
+        raise NotImplemented("Not implemented")
+
 
 class SearchHeadRole(SplunkRole):
     def doBeforeDeployment(self, ssh, srvconfig):
@@ -189,6 +239,30 @@ class SearchHeadRole(SplunkRole):
             self.app.logger.debug("Appling the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
             self.app.logger.error("Failed to apply the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+
+    def backup(self, appList, ssh, localPath):
+	"""
+        take a backup of some apps from a role and store it in localPath
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the destination path were the apps should be stored
+	"""
+        raise NotImplemented("Not implemented")
+
+    def restore(self, appList, ssh, localPath):
+	"""
+        restore a backup of some apps from localPath to a role
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the source path were the apps reside
+	"""
+        raise NotImplemented("Not implemented")
 
 
 class IndexerRole(SplunkRole):
@@ -230,6 +304,30 @@ class IndexerRole(SplunkRole):
         else:
             self.app.logger.error("Failed to apply the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
+    def backup(self, appList, ssh, localPath):
+	"""
+        take a backup of some apps from a role and store it in localPath
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the destination path were the apps should be stored
+	"""
+        raise NotImplemented("Not implemented")
+
+    def restore(self, appList, ssh, localPath):
+	"""
+        restore a backup of some apps from localPath to a role
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the source path were the apps reside
+	"""
+        raise NotImplemented("Not implemented")
+
 
 class UnifiedForwarderManagementRole(SplunkRole):
     def doBeforeDeployment(self, ssh, srvconfig):
@@ -270,6 +368,30 @@ class UnifiedForwarderManagementRole(SplunkRole):
             self.app.logger.debug("Reloading the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
             self.app.logger.error("Failed to reload the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+
+    def backup(self, appList, ssh, localPath):
+	"""
+        take a backup of some apps from a role and store it in localPath
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the destination path were the apps should be stored
+	"""
+        raise NotImplemented("Not implemented")
+
+    def restore(self, appList, ssh, localPath):
+	"""
+        restore a backup of some apps from localPath to a role
+        appList      list
+                     name of apps that should be backed up
+        ssh          QXSConsolas.Command.SSH
+                     the ssh connection object
+        localPath    string
+                     the source path were the apps reside
+	"""
+        raise NotImplemented("Not implemented")
 
 
 def splitUrlCreds(url):
