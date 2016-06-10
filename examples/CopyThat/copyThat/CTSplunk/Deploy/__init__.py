@@ -11,7 +11,7 @@ def GetConfiguredEnvs(sep=", "):
     envs = GetSystemConfiguration().get("SplunkDeployment.envs")
     for env in envs:
         l.append(env)
-    return str(sep).join(l)
+    return str(sep).join(sorted(l))
 
 def GetConfiguredRoles(sep=", "):
     l = []
@@ -20,14 +20,14 @@ def GetConfiguredRoles(sep=", "):
         for role in envs[env]:
             if role not in l:
                 l.append(role)
-    return str(sep).join(l)
+    return str(sep).join(sorted(set(l)))
 
 def GetConfiguredNodeEnvs(sep=", "):
     l = []
     envs = GetSystemConfiguration().get("SplunkNodes.envs")
     for env in envs:
         l.append(env)
-    return str(sep).join(l)
+    return str(sep).join(sorted(l))
 
 def GetConfiguredNodeRoles(sep=", "):
     l = []
@@ -36,7 +36,7 @@ def GetConfiguredNodeRoles(sep=", "):
         for role in envs[env]:
             if role not in l:
                 l.append(role)
-    return str(sep).join(l)
+    return str(sep).join(sorted(set(l)))
 
 
 
