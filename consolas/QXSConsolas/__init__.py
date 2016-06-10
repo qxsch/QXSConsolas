@@ -93,7 +93,8 @@ def run():
         except:
             pass
         puts("Available commands:")
-        for routename in config:
+        #for routename in config:
+        for routename in sorted(config):
             if routename == "help":
                 continue
             with indent(2):

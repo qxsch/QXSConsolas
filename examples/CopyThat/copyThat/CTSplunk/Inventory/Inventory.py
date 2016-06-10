@@ -131,7 +131,10 @@ class GenericInventory(object):
     def delete(self, object_id=None, object_name=None, object_subname=None):
         assert not (object_id is None and object_name is None and object_subname is None), "At least one identifier must be set"
         if object_id is None:
-            object_id = self.getObjectIdByName(object_name, object_subname)
+            if object_subname is None:
+                object_id = self.getObjectIdByName(object_name)
+            else:
+                object_id = self.getObjectIdByName(object_name, object_subname)
         else:
             self.getObjectId(object_id)
         result = self._connection.execute(md.InventoryObjects.delete().where(and_(md.InventoryObjects.c.class_id == self._classId, md.InventoryObjects.c.object_id == object_id)))
@@ -158,7 +161,10 @@ class GenericInventory(object):
         assert not (object_id is None and object_name is None and object_subname is None), "At least one identifier must be set"
         assert isinstance(attributeNames, list), "attributeNames must be of type list"
         if object_id is None:
-            object_id = self.getObjectIdByName(object_name, object_subname)
+            if object_subname is None:
+                object_id = self.getObjectIdByName(object_name)
+            else:
+                object_id = self.getObjectIdByName(object_name, object_subname)
         else:
             self.getObjectId(object_id)
         for k in attributeNames:
@@ -183,7 +189,10 @@ class GenericInventory(object):
     def updateAttributes(self, object_id=None, object_name=None, object_subname=None, **kwargs):
         assert not (object_id is None and object_name is None and object_subname is None), "At least one identifier must be set"
         if object_id is None:
-            object_id = self.getObjectIdByName(object_name, object_subname)
+            if object_subname is None:
+                object_id = self.getObjectIdByName(object_name)
+            else:
+                object_id = self.getObjectIdByName(object_name, object_subname)
         else:
             self.getObjectId(object_id)
         self._validateAttributes(kwargs, checkMandatoryAttrs=False)

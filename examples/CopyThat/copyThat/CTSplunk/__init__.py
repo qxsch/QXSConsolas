@@ -10,6 +10,10 @@ class AppAlreadyExistsException(Exception):
     pass
 class AppNotFoundException(Exception):
     pass
+class IndexAlreadyExistsException(Exception):
+    pass
+class IndexNotFoundException(Exception):
+    pass
 
 @CliApp(
     Name = "Dump the Configuration",
@@ -42,6 +46,15 @@ def DumpConfig(app):
                             if str(helptxt) != "": puts(colored.blue("# " + str(helptxt)))
                             if ckey in envs[env][role]:
                                 puts(colored.red(str(ckey) + ": ") + str(envs[env][role][ckey]))
+                            else:
+                                puts(colored.red(str(ckey) + ": ") + colored.blue("## UNDEFINED ##"))
+                        for ckey, helptxt in {"prelocal": "Execute locally before deployment", "preremote": "Execute on the remote site before deployment", "postlocal": "Execute locally after deployment", "postremote": "Execute on the remote site after deployment"}.iteritems():
+                            if str(helptxt) != "": puts(colored.blue("# " + str(helptxt)))
+                            if ckey in envs[env][role]:
+                                puts(colored.red(str(ckey) + ": "))
+                                with indent():
+                                     for cmd in envs[env][role][ckey]:
+                                         puts(colored.red("- ") + str(envs[env][role][ckey][cmd].configuration))
                             else:
                                 puts(colored.red(str(ckey) + ": ") + colored.blue("## UNDEFINED ##"))
                         for server in envs[env][role]["servers"]:

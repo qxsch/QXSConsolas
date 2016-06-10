@@ -16,12 +16,6 @@ SplunkNodes:
       indexers:
         role: IDX
         servers: [ "localhost" ]
-      indexermaster:
-        role: IDXM
-        servers: [ "localhost" ]
-      shdeployer:
-        role: SHDD
-        servers: [ "localhost" ]
       deployments:
         role: UFM
         servers: [ "localhost" ]
@@ -119,6 +113,24 @@ routes:
         WarnDeploymentTime: 20
         Inventory:
           Active: True
+    BackupApp:
+      func: CTSplunk.Deploy.BackupApp
+      description: Backup an app from splunk
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    RestoreApp:
+      func: CTSplunk.Deploy.RestoreApp
+      description: Restore an app to splunk
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    CopyApp:
+      func: CTSplunk.Deploy.CrossCopyApp
+      description: Cross Copy an app from a splunk environment to another
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
     SearchInvIndex:
       func: CTSplunk.Inventory.SearchIndex
       description: Search the Indexes Inventory
@@ -131,6 +143,18 @@ routes:
       showCliName: False
       showCliDescription: False
       logger: deploy.app
+    UpdateInvIndex:
+      func: CTSplunk.Inventory.UpdateIndex
+      description: Updates an Index in the Indexes Inventory
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    DeleteInvIndex:
+      func: CTSplunk.Inventory.DeleteIndex
+      description: Deletes an Index from the Indexes Inventory
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
     SearchInvApp:
       func: CTSplunk.Inventory.SearchApp
       description: Search the Apps Inventory
@@ -140,6 +164,18 @@ routes:
     CreateInvApp:
       func: CTSplunk.Inventory.CreateApp
       description: Creates an App in the Apps Inventory
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    UpdateInvApp:
+      func: CTSplunk.Inventory.UpdateApp
+      description: Updates an App in the Apps Inventory
+      showCliName: False
+      showCliDescription: False
+      logger: deploy.app
+    DeleteInvApp:
+      func: CTSplunk.Inventory.DeleteApp
+      description: Deletes an App from the Apps Inventory
       showCliName: False
       showCliDescription: False
       logger: deploy.app

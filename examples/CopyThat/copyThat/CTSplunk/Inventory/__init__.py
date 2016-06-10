@@ -1,7 +1,7 @@
 import logging, os
 from QXSConsolas.Cli import CliApp
 from QXSConsolas.Configuration import GetSystemConfiguration
-from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException
+from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException, AppAlreadyExistsException, IndexNotFoundException, IndexAlreadyExistsException
 from Inventory import IndexInventory, AppInventory
 from Handler import ConsoleHandler
 from sqlalchemy import create_engine
@@ -90,24 +90,72 @@ def SearchIndex(app):
         h.display(inv.search(indexName=searchNames["--index:"], sourcetypeName=searchNames["--sourcetype:"], **searchAttrs))
 
 @CliApp(
-    Name = "Create an App in the Apps inventory",
-    Description = "Create an App in the Apps inventory",
+    Name = "Create an Index in the Indexes inventory",
+    Description = "Create an Index in the Indexes inventory",
     Opts = _GenerateOptions("Indexes", [ 
         { "argument": "--index:",  "required": True, "description": "Set the name of the Index", "valuename": "INDEXNAME" },
         { "argument": "--sourcetype:", "required": True, "description": "Set the name of the SourceType", "valuename": "SOURCETYPENAME" },
-    ], [], prefix="", prefixDescription="Set a value for ", ignoreMandatory=True, setDefaultValues=True)
+    ], [], prefix="", prefixDescription="Set a value for ", ignoreMandatory=False, setDefaultValues=True)
 )
 def CreateIndex(app):
     searchNames = {}
-    for k in ["--app:"]:
+    for k in ["--index:", "--sourcetype:" ]:
         searchNames[k] = None
         if k in app.options:
             searchNames[k] = app.options[k]
-    searchAttrs = _GetAttrOptions("Apps", app.options, prefix="")
+    searchAttrs = _GetAttrOptions("Indexes", app.options, prefix="")
     with GetInventoryEngine().begin() as conn:
         inv = IndexInventory(conn)
         h = ConsoleHandler(inv, app.logger)
-        h.update(searchNames["--app:"], None, **searchAttrs)
+        if not inv.search(index=searchNames["--index:"], sourceType=searchNames["--sourcetype:"]):
+            h.update(None, searchNames["--index:"], searchNames["--sourcetype:"], **searchAttrs)
+        else:
+            raise IndexAlreadyExistsException("Index \"" + searchNames["--index:"]  + "\", Sourctype \"" + searchNames["--sourcetype:"]  + "\" already exists.")
+
+@CliApp(
+    Name = "Update an Index in the Indexes inventory",
+    Description = "Update an Index in the Indexes inventory",
+    Opts = _GenerateOptions("Indexes", [ 
+        { "argument": "--index:",  "required": True, "description": "Set the name of the Index", "valuename": "INDEXNAME" },
+        { "argument": "--sourcetype:", "required": True, "description": "Set the name of the SourceType", "valuename": "SOURCETYPENAME" },
+    ], [], prefix="", prefixDescription="Set a value for ", ignoreMandatory=True, setDefaultValues=False)
+)
+def UpdateIndex(app):
+    searchNames = {}
+    for k in ["--index:", "--sourcetype:" ]:
+        searchNames[k] = None
+        if k in app.options:
+            searchNames[k] = app.options[k]
+    searchAttrs = _GetAttrOptions("Indexes", app.options, prefix="")
+    with GetInventoryEngine().begin() as conn:
+        inv = IndexInventory(conn)
+        h = ConsoleHandler(inv, app.logger)
+        if not inv.search(index=searchNames["--index:"], sourceType=searchNames["--sourcetype:"]):
+            raise IndexNotFoundException("Index \"" + searchNames["--index:"]  + "\", Sourctype \"" + searchNames["--sourcetype:"]  + "\" does not exist.")
+        else:
+            h.update(None, searchNames["--index:"], searchNames["--sourcetype:"], **searchAttrs)
+
+@CliApp(
+    Name = "Delete an Index from the Indexes inventory",
+    Description = "Delete an Index from the Indexes inventory",
+    Opts = [ 
+        { "argument": "--index:",  "required": True, "description": "Set the name of the Index", "valuename": "INDEXNAME" },
+        { "argument": "--sourcetype:", "required": True, "description": "Set the name of the SourceType", "valuename": "SOURCETYPENAME" },
+    ]
+)
+def DeleteIndex(app):
+    searchNames = {}
+    for k in ["--index:", "--sourcetype:" ]:
+        searchNames[k] = None
+        if k in app.options:
+            searchNames[k] = app.options[k]
+    with GetInventoryEngine().begin() as conn:
+        inv = IndexInventory(conn)
+        h = ConsoleHandler(inv, app.logger)
+        if not inv.search(index=searchNames["--index:"], sourceType=searchNames["--sourcetype:"]):
+            raise IndexNotFoundException("Index \"" + searchNames["--index:"]  + "\", Sourctype \"" + searchNames["--sourcetype:"]  + "\" does not exist.")
+        else:
+            h.delete(None, searchNames["--index:"], searchNames["--sourcetype:"])
 
 
 @CliApp(
@@ -134,7 +182,7 @@ def SearchApp(app):
     Description = "Create the Apps inventory",
     Opts = _GenerateOptions("Apps", [ 
         { "argument": "--app:",  "required": True, "description": "Set the name of the App", "valuename": "APP" },
-    ], [], prefix="", prefixDescription="Set a value for ", ignoreMandatory=False, setDefaultValues=False)
+    ], [], prefix="", prefixDescription="Set a value for ", ignoreMandatory=False, setDefaultValues=True)
 )
 def CreateApp(app):
     searchNames = {}
@@ -146,6 +194,54 @@ def CreateApp(app):
     with GetInventoryEngine().begin() as conn:
         inv = AppInventory(conn)
         h = ConsoleHandler(inv, app.logger)
-        h.update(searchNames["--app:"], None, **searchAttrs)
+        if not inv.search(appName=searchNames["--app:"]):
+            h.update(None, searchNames["--app:"], None, **searchAttrs)
+        else:
+            raise AppAlreadyExistsException("App \"" + searchNames["--app:"]  + "\" already exists.")
+
+@CliApp(
+    Name = "Update the Apps inventory",
+    Description = "Update the Apps inventory",
+    Opts = _GenerateOptions("Apps", [ 
+        { "argument": "--app:",  "required": True, "description": "Set the name of the App", "valuename": "APP" },
+    ], [], prefix="", prefixDescription="Set a value for ", ignoreMandatory=True, setDefaultValues=False)
+)
+def UpdateApp(app):
+    searchNames = {}
+    for k in ["--app:"]:
+        searchNames[k] = None
+        if k in app.options:
+            searchNames[k] = app.options[k]
+    searchAttrs = _GetAttrOptions("Apps", app.options, prefix="")
+    with GetInventoryEngine().begin() as conn:
+        inv = AppInventory(conn)
+        h = ConsoleHandler(inv, app.logger)
+        if not inv.search(appName=searchNames["--app:"]):
+            raise AppNotFoundException("App \"" + searchNames["--app:"]  + "\" does not exist.")
+        else:
+            h.update(None, searchNames["--app:"], None, **searchAttrs)
+
+
+@CliApp(
+    Name = "Delete an App from the Apps inventory",
+    Description = "Delete an App from the Apps inventory",
+    Opts = [ 
+        { "argument": "--app:",  "required": True, "description": "Set the name of the App", "valuename": "APP" },
+    ]
+)
+def DeleteApp(app):
+    searchNames = {}
+    for k in ["--app:"]:
+        searchNames[k] = None
+        if k in app.options:
+            searchNames[k] = app.options[k]
+    with GetInventoryEngine().begin() as conn:
+        inv = AppInventory(conn)
+        h = ConsoleHandler(inv, app.logger)
+        if not inv.search(appName=searchNames["--app:"]):
+            raise AppNotFoundException("App \"" + searchNames["--app:"]  + "\" does not exist.")
+        else:
+            h.delete(None, searchNames["--app:"], None)
+
 
 
