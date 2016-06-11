@@ -10,15 +10,31 @@ SplunkInventory:
 SplunkNodes:
   envs:
     PROD:
+      singlesearchheads:
+        role: SNG
+        servers:
+          localhost:
+            hostname: "localhost"
+            path: "/opt/shd-apps"
       searchheads:
         role: SHD
-        servers: [ "localhost" ]
+        servers:
+          localhost:
+            hostname: "localhost"
+            path: "/opt/shd-apps"
+            target: "https://test:test@localhost:8089/"
       indexers:
         role: IDX
-        servers: [ "localhost" ]
+        servers:
+          localhost:
+            hostname: "localhost"
+            path: "/opt/idx-apps"
       deployments:
         role: UFM
-        servers: [ "localhost" ]
+        servers:
+          localhost:
+            hostname: "localhost"
+            path: "/opt/dpl-apps"
 SplunkDeployment:
   envs:
     PROD:

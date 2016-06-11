@@ -6,8 +6,9 @@ from QXSConsolas.Command import SSH, call
 from clint.textui import puts, colored, indent
 import timeit
 import abc
-from urlparse import urlparse
-from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException
+import requests
+from urlparse import urlparse, urljoin
+from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException, BackupException, RestoreException
 
 class SplunkRole(object):
     __metaclass__ = abc.ABCMeta
@@ -105,6 +106,31 @@ class SplunkRole(object):
 	"""
         pass
 
+    def _syncRemoteAppToLocal(self, ssh, appdir, remoteappdir, srvconfig, excludeList=[]):
+        cmdList = ["rsync", "--delete", "--stats", "--exclude", ".git*"]
+        # built-in excludes
+        for exclude in excludeList:
+            cmdList.extend(["--exclude", exclude])
+        # configured excludes
+        try:
+            for i in srvconfig["exclude"]:
+                cmdList.extend(["--exclude", srvconfig["exclude"][i]])
+        except:
+            pass
+        # use rsync
+        if ssh.host == "localhost":
+            cmdList.extend(["-az", remoteappdir + "/", appdir + "/"])
+        else:
+            cmdList.extend(["-aze", "ssh", ssh.host + ":" + remoteappdir + "/", appdir + "/"])
+        self.app.logger.debug("Running: " + " ".join(cmdList))
+        rc, stdout, stderr = call(cmdList)
+        if rc == 0:
+            self.app.logger.debug("Syncing the app from \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            return True
+        else:
+            self.app.logger.error("Failed to sync the app from \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            return False
+
     def _syncLocalAppToRemote(self, ssh, appdir, remoteappdir, srvconfig, excludeList=[]):
         cmdList = ["rsync", "--delete", "--stats", "--exclude", ".git*"]
         # built-in excludes
@@ -187,7 +213,17 @@ class SingleInstanceRole(SplunkRole):
         localPath    string
                      the destination path were the apps should be stored
 	"""
-        raise NotImplemented("Not implemented")
+        for app in appList:
+            backupFailed = True
+            for server in self._roleconfig["servers"]:
+                ssh.host = self._roleconfig["servers"][server]["hostname"]
+                if not self._syncRemoteAppToLocal(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
+                    self.app.logger.warning("Failed to backup the app from server \"" + ssh.host + "\"")
+                else:
+                    backupFailed = False
+                    break  # just  backzp from the first server
+            if backupFailed:
+                self.app.logger.error("Failed to backup the app from all available servers")
 
     def restore(self, appList, ssh, localPath):
 	"""
@@ -202,18 +238,13 @@ class SingleInstanceRole(SplunkRole):
         for app in appList:
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
-                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig["servers"][server]):
+                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
+
         for server in self._roleconfig["servers"]:
             ssh.host = self._roleconfig["servers"][server]["hostname"]
             url, user, password = splitUrlCreds(self._roleconfig["servers"][server])
             cmd = [ "splunk", "restart" ]
-            if not (url is None or url == ""):
-                cmd.append("-target")
-                cmd.append(url)
-            if not (user is None or user == "" or password is None or password == ""):
-                cmd.append("-auth")
-                cmd.append(user + ":" + password)
             rc, stdout, stderr = ssh.call(cmd)
             if rc == 0:
                 self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
@@ -270,7 +301,47 @@ class SearchHeadRole(SplunkRole):
         localPath    string
                      the destination path were the apps should be stored
 	"""
-        raise NotImplemented("Not implemented")
+        captainServer = None
+        captainServerStr = None
+        for server in self._roleconfig["servers"]:
+            url, user, password = splitUrlCreds(self._roleconfig["servers"][server])
+            if (url is None or url == ""):
+                url = 'https://' + self._roleconfig["servers"][server]["hostname"] + ':8089/'
+            url = urljoin(url, '/services/shcluster/captain/info?output_mode=json')
+            kwargs = {}
+            kwargs["timeout"] = (30, 60)
+            if not (user is None or user == "" or password is None or password == ""):
+                kwargs["auth"] = ( user, password )
+            try:
+                r = requests.get(url, **kwargs)
+                captainServerStr = str(r.json()["entry"][0]["content"]["label"])
+                break
+            except Exception as e:
+                self.app.logger.debug("Failed to resolve the captain on server \"" + self._roleconfig["servers"][server]["hostname"] + "\" with message: " + str(e))
+                pass
+
+        if captainServerStr is None:
+            raise BackupException("Failed to resolve the captain server.")
+        self.app.logger.debug("Received the following captain server string \"" + captainServerStr + "\"")
+       
+        for i in list(captainServerStr.split(".")):
+            for server in self._roleconfig["servers"]:
+                if self._roleconfig["servers"][server]["hostname"] == captainServerStr:
+                    captainServer = server
+                    break
+            captainServerStr = captainServerStr.rsplit(".", 1)[0]
+
+        if captainServer is None:
+            raise BackupException("The resolved captain server string did not match any hostname definition in the SplunkNodes configuration.")
+
+        self.app.logger.debug("Resolved the following captain server \"" + captainServer + "\"")
+        
+        # backup from the captain
+        for app in appList:
+            ssh.host = self._roleconfig["servers"][captainServer]["hostname"]
+            if not self._syncRemoteAppToLocal(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][captainServer]["path"], app), self._roleconfig["servers"][captainServer]):
+                self.app.logger.error("Failed to backup the app from captain server \"" + ssh.host + "\"")
+
 
     def restore(self, appList, ssh, localPath):
 	"""
@@ -285,18 +356,12 @@ class SearchHeadRole(SplunkRole):
         for app in appList:
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
-                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig["servers"][server]):
+                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
         for server in self._roleconfig["servers"]:
             ssh.host = self._roleconfig["servers"][server]["hostname"]
             url, user, password = splitUrlCreds(self._roleconfig["servers"][server])
             cmd = [ "splunk", "restart" ]
-            if not (url is None or url == ""):
-                cmd.append("-target")
-                cmd.append(url)
-            if not (user is None or user == "" or password is None or password == ""):
-                cmd.append("-auth")
-                cmd.append(user + ":" + password)
             rc, stdout, stderr = ssh.call(cmd)
             if rc == 0:
                 self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
@@ -353,7 +418,7 @@ class IndexerRole(SplunkRole):
         localPath    string
                      the destination path were the apps should be stored
 	"""
-        raise NotImplemented("Not implemented")
+        raise NotImplementedError("Not implemented for indexer clusters")
 
     def restore(self, appList, ssh, localPath):
 	"""
@@ -365,7 +430,7 @@ class IndexerRole(SplunkRole):
         localPath    string
                      the source path were the apps reside
 	"""
-        raise NotImplemented("Not implemented")
+        raise NotImplementedError("Not implemented for indexer clusters")
 
 
 class UnifiedForwarderManagementRole(SplunkRole):
@@ -414,7 +479,17 @@ class UnifiedForwarderManagementRole(SplunkRole):
         localPath    string
                      the destination path were the apps should be stored
 	"""
-        raise NotImplemented("Not implemented")
+        for app in appList:
+            backupFailed = True
+            for server in self._roleconfig["servers"]:
+                ssh.host = self._roleconfig["servers"][server]["hostname"]
+                if not self._syncRemoteAppToLocal(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
+                    self.app.logger.warning("Failed to backup the app from server \"" + ssh.host + "\"")
+                else:
+                    backupFailed = False
+                    break  # just  backzp from the first server
+            if backupFailed:
+                self.app.logger.error("Failed to backup the app from all available servers")
 
     def restore(self, appList, ssh, localPath):
 	"""
@@ -429,15 +504,12 @@ class UnifiedForwarderManagementRole(SplunkRole):
         for app in appList:
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
-                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(remoteappdir, app), self._roleconfig["servers"][server]):
+                if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
         for server in self._roleconfig["servers"]:
             ssh.host = self._roleconfig["servers"][server]["hostname"]
             url, user, password = splitUrlCreds(self._roleconfig["servers"][server])
             cmd = [ "splunk", "reload", "deploy-server", "--answer-yes" ]
-            if not (url is None or url == ""):
-                cmd.append("-target")
-                cmd.append(url)
             if not (user is None or user == "" or password is None or password == ""):
                 cmd.append("-auth")
                 cmd.append(user + ":" + password)
