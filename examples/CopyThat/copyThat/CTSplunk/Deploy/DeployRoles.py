@@ -319,8 +319,7 @@ class SearchHeadRole(SplunkRole):
             if (url is None or url == ""):
                 url = 'https://' + self._roleconfig["servers"][server]["hostname"] + ':8089/'
             url = urljoin(url, '/services/shcluster/captain/info?output_mode=json')
-            kwargs = {}
-            kwargs["timeout"] = (30, 60)
+            kwargs = getRequestsConfig(self._roleconfig["servers"][server])
             if not (user is None or user == "" or password is None or password == ""):
                 kwargs["auth"] = ( user, password )
             try:
@@ -552,6 +551,23 @@ class UnifiedForwarderManagementRole(SplunkRole):
         if failures > 0:
             raise RestoreException("The restore failed.")
 
+
+def getRequestsConfig(srvconfig):
+    try:
+        kwargs = srvconfig["requests"].configuration
+        if not isinstance(kwargs, dict):
+             kwargs = {}
+    except:
+        kwargs = {}
+    try:
+        if isinstance(kwargs["timeout"], list):
+            if len(kwargs["timeout"]) == 2:
+                kwargs["timeout"] = (int(kwargs["timeout"][0]), int(kwargs["timeout"][1]))
+            elif len(kwargs["timeout"]) == 1:
+                kwargs["timeout"] = (30, int(kwargs["timeout"][0]))
+    except:
+        kwargs["timeout"] = (30, 60)
+    return kwargs
 
 def splitUrlCreds(url):
     if type(url) == str:
