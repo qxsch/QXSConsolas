@@ -1,10 +1,10 @@
 import logging, os
-from QXSConsolas.Cli import CliApp
+from QXSConsolas.Cli import CliApp, ApplicationData
 from clint.textui import puts, colored, indent
 from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException
 from SplunkDeployer import SplunkDeployer
 from QXSConsolas.Configuration import GetSystemConfiguration
-
+from QXSConsolas.TMP import CreateTmpDir
 
 def GetConfiguredEnvs(sep=", "):
     l = [ "ALL" ]
@@ -139,9 +139,29 @@ def RestoreApp(app):
     ]
 )
 def CrossCopyApp(app):
-    # create tmp dir
-    #     backup to tmp dir
-    #     restore from tmp dir
-    # finally remove tmp dir
-    pass
+    app.logger.info("Copying the selected apps (" + ", ".join(app.options["--app:"]) + ") from environment \"" + app.options["--from-env:"] + "\" and role \"" + app.options["--from-role:"] + "\" to environment \"" + app.options["--to-env:"] + "\" and role \"" + app.options["--to-role:"])
+    #with TmpDir("CT", "tmp-app") as d:
+    with CreateTmpDir("CT", "tmp-app") as d:
+        app.logger.debug("Temporary directory has been created under: " + d)
+
+        s = SplunkDeployer()
+        tmpapp = ApplicationData(app)
+        tmpapp.options = {
+            "--path:": d,
+            "--app:": app.options["--app:"],
+            "--env:": app.options["--from-env:"],
+            "--role:": app.options["--from-role:"],
+        }
+        tmpapp.arguments = []
+        s.backup(tmpapp)
+
+        tmpapp.options = {
+            "--path:": d,
+            "--app:": app.options["--app:"],
+            "--env:": app.options["--to-env:"],
+            "--role:": app.options["--to-role:"],
+        }
+        tmpapp.arguments = []
+        s.restore(tmpapp)
+
 

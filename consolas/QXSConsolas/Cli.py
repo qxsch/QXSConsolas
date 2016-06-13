@@ -368,7 +368,6 @@ class Application:
                     h.setLevel(level)
                     if isinstance(h.formatter, ColoredFormatter):
                         h.formatter.formatStackTrace = formatStackTrace
- 
 
     def run(self, argv = None, data = None, logger = None):
         """
@@ -405,20 +404,36 @@ class ApplicationData:
 
     def __init__(
         self,
-        app
+        app,
+        name = None,
+        description = None,
+        data = None,
+        configuration = None,
+        logger = None,
+        options = dict(),
+        arguments = list()
     ):
         """
         Creates the application data
         app the Application object
         """
-        assert isinstance(app, Application), "An application object is required!"
-        self.data = app.data
-        self.logger = app.logger
-        self.configuration = app.configuration
-        self.options = app.options
-        self.arguments = app.arguments
-        self.name = app.name
-        self.description = app.description
+        if app is None:
+            self.data = data
+            self.logger = logger
+            self.configuration = configuration
+            self.options = options
+            self.arguments = arguments
+            self.name = name
+            self.description = description
+        else:
+            assert isinstance(app, Application) or isinstance(app, ApplicationData), "An Application or ApplicationData object is required!"
+            self.data = app.data
+            self.logger = app.logger
+            self.configuration = app.configuration
+            self.options = app.options
+            self.arguments = app.arguments
+            self.name = app.name
+            self.description = app.description
 
     def log(self, message, level="info"):
         if hasattr(self.logger, level):
