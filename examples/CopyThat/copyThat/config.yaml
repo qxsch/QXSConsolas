@@ -23,6 +23,8 @@ SplunkNodes:
             hostname: "localhost"
             path: "/opt/shd-apps"
             target: "https://test:test@localhost:8089/"
+            requests:
+              verify: False
       indexers:
         role: IDX
         servers:
