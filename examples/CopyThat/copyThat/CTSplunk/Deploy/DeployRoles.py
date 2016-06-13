@@ -227,7 +227,7 @@ class SingleInstanceRole(SplunkRole):
                 self.app.logger.error("Failed to backup the app \"" + app + "\" on all available servers")
                 failures += 1
         if failures > 0:
-            raise BackupException("The backup partially failed.")
+            raise BackupException("The backup failed.")
 
     def restore(self, appList, ssh, localPath):
 	"""
@@ -247,7 +247,7 @@ class SingleInstanceRole(SplunkRole):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
                     failures += 1
         if failures > 0:
-            raise RestoreException("The backup partially failed.")
+            raise RestoreException("The restore failed.")
 
         for server in self._roleconfig["servers"]:
             ssh.host = self._roleconfig["servers"][server]["hostname"]
@@ -260,7 +260,7 @@ class SingleInstanceRole(SplunkRole):
                 self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                 failures += 1
         if failures > 0:
-            raise RestoreException("The backup partially failed.")
+            raise RestoreException("The restore failed.")
 
 
 class SearchHeadRole(SplunkRole):
@@ -354,7 +354,7 @@ class SearchHeadRole(SplunkRole):
                 self.app.logger.error("Failed to backup the app \"" + app + "\" from captain server \"" + ssh.host + "\"")
                 failures += 1
         if failures > 0:
-            raise BackupException("The backup partially failed.")
+            raise BackupException("The backup failed.")
 
     def restore(self, appList, ssh, localPath):
 	"""
@@ -374,7 +374,7 @@ class SearchHeadRole(SplunkRole):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
                     failures += 1
         if failures > 0:
-            raise RestoreException("The backup partially failed.")
+            raise RestoreException("The restore failed.")
 
         for server in self._roleconfig["servers"]:
             ssh.host = self._roleconfig["servers"][server]["hostname"]
@@ -387,7 +387,7 @@ class SearchHeadRole(SplunkRole):
                 self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                 failures += 1
         if failures > 0:
-            raise RestoreException("The backup partially failed.")
+            raise RestoreException("The restore failed.")
 
 
 class IndexerRole(SplunkRole):
@@ -514,7 +514,7 @@ class UnifiedForwarderManagementRole(SplunkRole):
                 self.app.logger.error("Failed to backup the app \"" + app + "\" on all available servers")
                 failures += 1
         if failures > 0:
-            raise BackupException("The backup partially failed.")
+            raise BackupException("The backup failed.")
 
     def restore(self, appList, ssh, localPath):
 	"""
@@ -534,7 +534,7 @@ class UnifiedForwarderManagementRole(SplunkRole):
                     self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
                     failures += 1
         if failures > 0:
-            raise RestoreException("The backup partially failed.")
+            raise RestoreException("The restore failed.")
 
         for server in self._roleconfig["servers"]:
             ssh.host = self._roleconfig["servers"][server]["hostname"]
@@ -550,7 +550,7 @@ class UnifiedForwarderManagementRole(SplunkRole):
                 self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                 failures += 1
         if failures > 0:
-            raise RestoreException("The backup partially failed.")
+            raise RestoreException("The restore failed.")
 
 
 def splitUrlCreds(url):
