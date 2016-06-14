@@ -6,7 +6,7 @@ from QXSConsolas.Command import SSH, call
 from clint.textui import puts, colored, indent
 import timeit
 import abc
-import requests
+import requests, warnings
 from urlparse import urlparse, urljoin
 from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundException, BackupException, RestoreException
 
@@ -323,7 +323,11 @@ class SearchHeadRole(SplunkRole):
             if not (user is None or user == "" or password is None or password == ""):
                 kwargs["auth"] = ( user, password )
             try:
-                r = requests.get(url, **kwargs)
+                r = None
+                with warnings.catch_warnings(record=True) as ws:
+                    r = requests.get(url, **kwargs)
+                    for w in ws:
+                        self.app.logger.debug(str(w.category.__module__ + "." + w.category.__name__) + ": " + str(w.message))
                 captainServerStr = str(r.json()["entry"][0]["content"]["label"])
                 break
             except Exception as e:
@@ -567,6 +571,7 @@ def getRequestsConfig(srvconfig):
                 kwargs["timeout"] = (30, int(kwargs["timeout"][0]))
     except:
         kwargs["timeout"] = (30, 60)
+    print(kwargs)
     return kwargs
 
 def splitUrlCreds(url):

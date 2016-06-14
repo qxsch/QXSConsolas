@@ -222,6 +222,11 @@ logging:
     handlers: [console]
 
   loggers:
+    requests.packages.urllib3.connectionpool:
+      level: !!python/name:logging.NOTSET
+      handlers: [logfile, splunklogfile]
+      qualname: requests.packages.urllib3.connectionpool
+      propagate: false
     deploy.app:
       level: !!python/name:logging.NOTSET
       handlers: [console, logfile, splunklogfile]
