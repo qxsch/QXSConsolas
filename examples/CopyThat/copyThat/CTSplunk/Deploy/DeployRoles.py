@@ -571,7 +571,6 @@ def getRequestsConfig(srvconfig):
                 kwargs["timeout"] = (30, int(kwargs["timeout"][0]))
     except:
         kwargs["timeout"] = (30, 60)
-    print(kwargs)
     return kwargs
 
 def splitUrlCreds(url):
