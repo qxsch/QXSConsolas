@@ -31,14 +31,8 @@ class SplunkDeployer:
         try:
             appconfig = self.app.configuration.get("SplunkDeployment.apps")[appname]
             appdir = appconfig.get("directory")
-            try:
-                if appconfig.get("multiapps"):
-                    appdir = os.path.join(
-                        appconfig.get("directory"),
-                        appname
-                    )
-            except:
-                pass
+            if os.path.islink(appdir):
+                appdir = os.readlink(appdir)
             if not os.path.isdir(appdir):
                 raise AppNotFoundException("The app \"" + appname  + "\" does not exist in \"" + appdir + "\".")
             return [appdir, appconfig] 
@@ -52,6 +46,8 @@ class SplunkDeployer:
             appname
         )
 
+        if os.path.islink(appdir):
+            appdir = os.readlink(appdir)
         if not os.path.isdir(appdir):
             raise AppNotFoundException("The app \"" + appname  + "\" does not exist in \"" + appdir + "\".")
         return [appdir, appconfig]

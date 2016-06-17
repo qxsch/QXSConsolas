@@ -72,12 +72,8 @@ SplunkDeployment:
             path: "/opt/dpl-apps"
             target: "https://test:test@localhost:8089/"
   apps:
-    #anothersingledir:
+    #myAappName:
     #  directory: /there/is/my/app
-    #  multiapps: False  # Single App resides within the directory
-    #anothermultidir:
-    #  directory: /there/is/also/another/path
-    #  multiapps: True  # Multiple Apps reside within the directory
     default:
       directory: /opt/apps/
 
