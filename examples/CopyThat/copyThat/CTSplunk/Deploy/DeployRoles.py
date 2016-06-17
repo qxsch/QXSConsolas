@@ -33,7 +33,10 @@ class SplunkRole(object):
         roleconfig QXSConsolas.Configuration.Configuration
                    configuration of the role, where the app shoukd be deplyed
 	"""
-        self._logger = logger
+        if isinstance(logger, logging.Logger):
+            self._logger = logger
+        else:
+            self._logger = logging.getLogger()
         self._envname = envname
         self._envconfig = envconfig
         self._rolename = rolename
