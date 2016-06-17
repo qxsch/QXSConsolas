@@ -165,7 +165,7 @@ class SplunkDeployer:
         for role in deployToRoles:
             self.app.logger.info("Deploying to environment \"" + envname + "\" role \"" + role + "\" (" + envconfig[role]["role"] + ")")
             self._runBeforeDeployment(ssh, envname, role)
-            self._roles[envconfig[role]["role"]].setRoleInfo(self.app, envname, envconfig, role, envconfig[role])
+            self._roles[envconfig[role]["role"]].setRoleInfo(self.app.logger, envname, envconfig, role, envconfig[role])
             for server in envconfig[role]["servers"]:
                 srv = envconfig[role]["servers"][server]
                 ssh.host = srv["hostname"]
@@ -269,7 +269,7 @@ class SplunkDeployer:
         if not rolename in self._affectedServers[envname]:
             self._affectedServers[envname][rolename] = True
             envs = self.app.configuration.get("SplunkDeployment.envs")
-            self._roles[envs[envname][rolename]["role"]].setRoleInfo(self.app, envname, envs[envname], rolename, envs[envname][rolename])
+            self._roles[envs[envname][rolename]["role"]].setRoleInfo(self.app.logger, envname, envs[envname], rolename, envs[envname][rolename])
             for server in envs[envname][rolename]["servers"]:
                 srv = envs[envname][rolename]["servers"][server]
                 ssh.host = srv["hostname"]
@@ -280,7 +280,7 @@ class SplunkDeployer:
         envs = self.app.configuration.get("SplunkDeployment.envs")
         for envname in self._affectedServers:
             for rolename in self._affectedServers[envname]:
-                self._roles[envs[envname][rolename]["role"]].setRoleInfo(self.app, envname, envs[envname], rolename, envs[envname][rolename])
+                self._roles[envs[envname][rolename]["role"]].setRoleInfo(self.app.logger, envname, envs[envname], rolename, envs[envname][rolename])
                 for server in envs[envname][rolename]["servers"]:
                     srv = envs[envname][rolename]["servers"][server]
                     ssh.host = srv["hostname"]
@@ -455,7 +455,7 @@ class SplunkDeployer:
 
         envs = self.app.configuration.get("SplunkNodes.envs")
         role = self._roles[envs[self.app.options["--env:"]][self.app.options["--role:"]]["role"]]
-        role.setRoleInfo(self.app, self.app.options["--env:"], envs[self.app.options["--env:"]], self.app.options["--role:"], envs[self.app.options["--env:"]][self.app.options["--role:"]])
+        role.setRoleInfo(self.app.logger, self.app.options["--env:"], envs[self.app.options["--env:"]], self.app.options["--role:"], envs[self.app.options["--env:"]][self.app.options["--role:"]])
         self.app.logger.info("Taking a backup for the selected apps (" + ", ".join(self.app.options["--app:"]) + ") from environment \"" + self.app.options["--env:"] + "\" and role \"" + self.app.options["--role:"] + "\" to local path \"" + self.app.options["--path:"] + "\"")
         role.backup(list(self.app.options["--app:"]), ssh, self.app.options["--path:"])
 
@@ -479,7 +479,7 @@ class SplunkDeployer:
             assert os.path.exists(os.path.join(self.app.options["--path:"], appName)), "The app \"" + appName + "\" does not exist under: " + self.app.options["--path:"]
 
         role = self._roles[envs[self.app.options["--env:"]][self.app.options["--role:"]]["role"]]
-        role.setRoleInfo(self.app, self.app.options["--env:"], envs[self.app.options["--env:"]], self.app.options["--role:"], envs[self.app.options["--env:"]][self.app.options["--role:"]])
+        role.setRoleInfo(self.app.logger, self.app.options["--env:"], envs[self.app.options["--env:"]], self.app.options["--role:"], envs[self.app.options["--env:"]][self.app.options["--role:"]])
         self.app.logger.info("Restoring a backup for the selected apps (" + ", ".join(self.app.options["--app:"]) + ") from local path \"" + self.app.options["--path:"] + "\" to environment \"" + self.app.options["--env:"] + "\" and role \"" + self.app.options["--role:"] + "\"")
         role.restore(list(self.app.options["--app:"]), ssh, self.app.options["--path:"])
 

@@ -13,17 +13,17 @@ from CTSplunk import NoRolesToDeployException, DeploymentException, AppNotFoundE
 class SplunkRole(object):
     __metaclass__ = abc.ABCMeta
 
-    app = None
+    _logger = None
     _envname = None
     _envconfig = None
     _rolename = None
     _roleconfig = None
 
-    def setRoleInfo(self, cliapp, envname, envconfig, rolename, roleconfig):
+    def setRoleInfo(self, logger, envname, envconfig, rolename, roleconfig):
 	"""
         sets the role info during deployment and backup/restores
-        cliapp    QXSConsolas.Cli.ApplicationData
-                  cli application data
+        logger    logging.Logger
+                  a logger
         envname   string
                   name of the environment, where the app should be deployed
         envconfig QXSConsolas.Configuration.Configuration
@@ -33,7 +33,7 @@ class SplunkRole(object):
         roleconfig QXSConsolas.Configuration.Configuration
                    configuration of the role, where the app shoukd be deplyed
 	"""
-        self.app = cliapp
+        self._logger = logger
         self._envname = envname
         self._envconfig = envconfig
         self._rolename = rolename
@@ -122,13 +122,13 @@ class SplunkRole(object):
             cmdList.extend(["-az", remoteappdir + "/", appdir + "/"])
         else:
             cmdList.extend(["-aze", "ssh", ssh.host + ":" + remoteappdir + "/", appdir + "/"])
-        self.app.logger.debug("Running: " + " ".join(cmdList))
+        self._logger.debug("Running: " + " ".join(cmdList))
         rc, stdout, stderr = call(cmdList)
         if rc == 0:
-            self.app.logger.debug("Syncing the app from \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.debug("Syncing the app from \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             return True
         else:
-            self.app.logger.error("Failed to sync the app from \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.error("Failed to sync the app from \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             return False
 
     def _syncLocalAppToRemote(self, ssh, appdir, remoteappdir, srvconfig, excludeList=[]):
@@ -147,22 +147,22 @@ class SplunkRole(object):
             cmdList.extend(["-az", appdir + "/", remoteappdir + "/"])
         else:
             cmdList.extend(["-aze", "ssh", appdir + "/", ssh.host + ":" + remoteappdir + "/"])
-        self.app.logger.debug("Running: " + " ".join(cmdList))
+        self._logger.debug("Running: " + " ".join(cmdList))
         rc, stdout, stderr = call(cmdList)
         if rc == 0:
-            self.app.logger.debug("Syncing the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.debug("Syncing the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             return True
         else:
-            self.app.logger.error("Failed to sync the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.error("Failed to sync the app to \"" + ssh.host + ":" + remoteappdir + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             return False
 
     def _removeFileFromApp(self, ssh, remoteappdir, filename):
         rc, stdout, stderr = ssh.call(["find", remoteappdir, "-name", filename, "-print", "-prune", "-exec", "rm", "-rf", "{}", ";"])
         if rc == 0:
             if stdout.strip() != "":
-                self.app.logger.warning("Deleted the following files on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                self._logger.warning("Deleted the following files on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
-            self.app.logger.error("Failed to delete file \"" + filename + "\" from app on server \"" + ssh.host + "\" with rc " + str(rc) + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.error("Failed to delete file \"" + filename + "\" from app on server \"" + ssh.host + "\" with rc " + str(rc) + ":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
 
 class SingleInstanceRole(SplunkRole):
@@ -199,9 +199,9 @@ class SingleInstanceRole(SplunkRole):
             cmd.append(user + ":" + password)
         rc, stdout, stderr = ssh.call(cmd)
         if rc == 0:
-            self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
-            self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
     def backup(self, appList, ssh, localPath):
 	"""
@@ -219,12 +219,12 @@ class SingleInstanceRole(SplunkRole):
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
                 if not self._syncRemoteAppToLocal(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
-                    self.app.logger.warning("Failed to backup the app \"" + app + "\" from server \"" + ssh.host + "\"")
+                    self._logger.warning("Failed to backup the app \"" + app + "\" from server \"" + ssh.host + "\"")
                 else:
                     backupFailed = False
                     break  # just  backzp from the first server
             if backupFailed:
-                self.app.logger.error("Failed to backup the app \"" + app + "\" on all available servers")
+                self._logger.error("Failed to backup the app \"" + app + "\" on all available servers")
                 failures += 1
         if failures > 0:
             raise BackupException("The backup failed.")
@@ -244,7 +244,7 @@ class SingleInstanceRole(SplunkRole):
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
                 if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
-                    self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
+                    self._logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
                     failures += 1
         if failures > 0:
             raise RestoreException("The restore failed.")
@@ -255,9 +255,9 @@ class SingleInstanceRole(SplunkRole):
             cmd = [ "splunk", "restart" ]
             rc, stdout, stderr = ssh.call(cmd)
             if rc == 0:
-                self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                self._logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             else:
-                self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                self._logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                 failures += 1
         if failures > 0:
             raise RestoreException("The restore failed.")
@@ -298,9 +298,9 @@ class SearchHeadRole(SplunkRole):
             cmd.append(user + ":" + password)
         rc, stdout, stderr = ssh.call(cmd)
         if rc == 0:
-            self.app.logger.debug("Appling the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.debug("Appling the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
-            self.app.logger.error("Failed to apply the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.error("Failed to apply the SHD cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
     def backup(self, appList, ssh, localPath):
 	"""
@@ -327,15 +327,15 @@ class SearchHeadRole(SplunkRole):
                 with warnings.catch_warnings(record=True) as ws:
                     r = requests.get(url, **kwargs)
                     for w in ws:
-                        self.app.logger.debug(str(w.category.__module__ + "." + w.category.__name__) + ": " + str(w.message))
+                        self._logger.debug(str(w.category.__module__ + "." + w.category.__name__) + ": " + str(w.message))
                 captainServerStr = str(r.json()["entry"][0]["content"]["label"])
                 break
             except Exception as e:
-                self.app.logger.debug("Failed to resolve the captain on server \"" + self._roleconfig["servers"][server]["hostname"] + "\" with message: " + str(e))
+                self._logger.debug("Failed to resolve the captain on server \"" + self._roleconfig["servers"][server]["hostname"] + "\" with message: " + str(e))
 
         if captainServerStr is None:
             raise BackupException("Failed to resolve the captain server.")
-        self.app.logger.debug("Received the following captain server string \"" + captainServerStr + "\"")
+        self._logger.debug("Received the following captain server string \"" + captainServerStr + "\"")
        
         for i in list(captainServerStr.split(".")):
             for server in self._roleconfig["servers"]:
@@ -347,14 +347,14 @@ class SearchHeadRole(SplunkRole):
         if captainServer is None:
             raise BackupException("The resolved captain server string did not match any hostname definition in the SplunkNodes configuration.")
 
-        self.app.logger.debug("Resolved the following captain server \"" + captainServer + "\"")
+        self._logger.debug("Resolved the following captain server \"" + captainServer + "\"")
         
         # backup from the captain
         failures = 0
         for app in appList:
             ssh.host = self._roleconfig["servers"][captainServer]["hostname"]
             if not self._syncRemoteAppToLocal(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][captainServer]["path"], app), self._roleconfig["servers"][captainServer]):
-                self.app.logger.error("Failed to backup the app \"" + app + "\" from captain server \"" + ssh.host + "\"")
+                self._logger.error("Failed to backup the app \"" + app + "\" from captain server \"" + ssh.host + "\"")
                 failures += 1
         if failures > 0:
             raise BackupException("The backup failed.")
@@ -374,7 +374,7 @@ class SearchHeadRole(SplunkRole):
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
                 if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
-                    self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
+                    self._logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
                     failures += 1
         if failures > 0:
             raise RestoreException("The restore failed.")
@@ -385,9 +385,9 @@ class SearchHeadRole(SplunkRole):
             cmd = [ "splunk", "restart" ]
             rc, stdout, stderr = ssh.call(cmd)
             if rc == 0:
-                self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                self._logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             else:
-                self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                self._logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                 failures += 1
         if failures > 0:
             raise RestoreException("The restore failed.")
@@ -428,9 +428,9 @@ class IndexerRole(SplunkRole):
             cmd.append(user + ":" + password)
         rc, stdout, stderr = ssh.call(cmd)
         if rc == 0:
-            self.app.logger.debug("Appling the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.debug("Appling the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
-            self.app.logger.error("Failed to apply the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.error("Failed to apply the IDX cluster-bundle on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
     def backup(self, appList, ssh, localPath):
 	"""
@@ -489,9 +489,9 @@ class UnifiedForwarderManagementRole(SplunkRole):
             cmd.append(user + ":" + password)
         rc, stdout, stderr = ssh.call(cmd)
         if rc == 0:
-            self.app.logger.debug("Reloading the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.debug("Reloading the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
         else:
-            self.app.logger.error("Failed to reload the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+            self._logger.error("Failed to reload the deploy-server on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
 
     def backup(self, appList, ssh, localPath):
 	"""
@@ -509,12 +509,12 @@ class UnifiedForwarderManagementRole(SplunkRole):
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
                 if not self._syncRemoteAppToLocal(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
-                    self.app.logger.warning("Failed to backup the app \"" + app + "\" from server \"" + ssh.host + "\"")
+                    self._logger.warning("Failed to backup the app \"" + app + "\" from server \"" + ssh.host + "\"")
                 else:
                     backupFailed = False
                     break  # just  backzp from the first server
             if backupFailed:
-                self.app.logger.error("Failed to backup the app \"" + app + "\" on all available servers")
+                self._logger.error("Failed to backup the app \"" + app + "\" on all available servers")
                 failures += 1
         if failures > 0:
             raise BackupException("The backup failed.")
@@ -534,7 +534,7 @@ class UnifiedForwarderManagementRole(SplunkRole):
             for server in self._roleconfig["servers"]:
                 ssh.host = self._roleconfig["servers"][server]["hostname"]
                 if not self._syncLocalAppToRemote(ssh, os.path.join(localPath, app), os.path.join(self._roleconfig["servers"][server]["path"], app), self._roleconfig["servers"][server]):
-                    self.app.logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
+                    self._logger.error("Failed to restore the app to server \"" + ssh.host + "\"")
                     failures += 1
         if failures > 0:
             raise RestoreException("The restore failed.")
@@ -548,9 +548,9 @@ class UnifiedForwarderManagementRole(SplunkRole):
                 cmd.append(user + ":" + password)
             rc, stdout, stderr = ssh.call(cmd)
             if rc == 0:
-                self.app.logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                self._logger.debug("Restarting splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
             else:
-                self.app.logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
+                self._logger.error("Failed to restart splunk on server \"" + ssh.host + "\":\n" + (stdout.strip() + "\n" + stderr.strip()).strip())
                 failures += 1
         if failures > 0:
             raise RestoreException("The restore failed.")
