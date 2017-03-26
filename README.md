@@ -1,3 +1,4 @@
+[![Project Status](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 
 # QXSConsolas
 A Python console application framework with clint, cli route configuration and logging configuration
